@@ -18,6 +18,18 @@ Instead of writing custom validation logic, you can combine selectors, assertion
 
 ## Installation
 
+> **Note**: Code Guardian is not yet published to npm. To use it now, you need to clone the repository, build it, and use npm link:
+> 
+> ```bash
+> git clone https://github.com/diullei/codeguardian.git
+> cd codeguardian
+> npm install
+> npm run build
+> npm link
+> ```
+
+Once published, you will be able to install it via:
+
 ```bash
 npm install -g codeguardian
 ```
