@@ -398,17 +398,6 @@ expected_value: 'added' # Expected value
 operator: '==' # Comparison operator
 ```
 
-## Supported Languages
-
-AST-based rules support:
-
-- TypeScript
-- JavaScript
-- Python
-- Go
-- Rust
-- Java
-
 ## License
 
 MIT

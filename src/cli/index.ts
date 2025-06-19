@@ -25,6 +25,8 @@ interface GeneratePromptArgs {
     task?: string;
     taskFile?: string;
     output?: string;
+    mode?: 'task' | 'rule';
+    description?: string;
 }
 
 const cli = yargs(hideBin(process.argv))
@@ -105,29 +107,53 @@ const cli = yargs(hideBin(process.argv))
     )
     .command<GeneratePromptArgs>(
         'generate-prompt',
-        'Generate a prompt for an AI to write a task validation rule',
+        'Generate a prompt for an AI to write validation rules',
         (yargs) => {
             return yargs
+                .option('mode', {
+                    alias: 'm',
+                    type: 'string',
+                    choices: ['task', 'rule'] as const,
+                    description: 'Generation mode: task (validation for a specific task) or rule (general rule from description)',
+                    default: 'task',
+                })
                 .option('task', {
                     type: 'string',
-                    description: 'The task description for the AI.',
+                    description: 'The task description for the AI (used in task mode).',
                 })
                 .option('task-file', {
                     type: 'string',
-                    description: 'Path to a file containing the task description.',
+                    description: 'Path to a file containing the task description (used in task mode).',
+                })
+                .option('description', {
+                    alias: 'd',
+                    type: 'string',
+                    description: 'Rule description for generating a validation rule (used in rule mode).',
                 })
                 .option('output', {
                     alias: 'o',
                     type: 'string',
-                    description: 'Path to save the generated prompt file.',
+                    description: 'Path to save the generated output (prompt in task mode, rule YAML in rule mode).',
                 })
                 .check((argv) => {
-                    if (!argv.task && !argv.taskFile) {
-                        throw new Error('You must provide the task description using either --task or --task-file.');
+                    if (argv.mode === 'task' && !argv.task && !argv.taskFile) {
+                        throw new Error('In task mode, you must provide the task description using either --task or --task-file.');
+                    }
+                    if (argv.mode === 'rule' && !argv.description) {
+                        throw new Error('In rule mode, you must provide a rule description using --description.');
                     }
                     return true;
                 })
-                .conflicts('task', 'task-file');
+                .conflicts('task', 'task-file')
+                .epilogue(
+                    'Examples:\n' +
+                    '  # Generate prompt for task validation (default mode)\n' +
+                    '  $ codeguardian generate-prompt --task "Add user authentication"\n\n' +
+                    '  # Generate a rule from description\n' +
+                    '  $ codeguardian generate-prompt --mode rule --description "No console.log in production code"\n\n' +
+                    '  # Save output to file\n' +
+                    '  $ codeguardian generate-prompt -m rule -d "Enforce clean architecture" -o clean-arch.cg.yaml'
+                );
         },
         async (args) => {
             await runPromptGeneration(args);
@@ -253,25 +279,32 @@ async function runValidation(args: ValidateArgs) {
 
 async function runPromptGeneration(args: GeneratePromptArgs) {
     try {
-        let taskContent: string;
-
-        if (args.taskFile) {
-            taskContent = await fs.readFile(args.taskFile, 'utf-8');
-        } else {
-            taskContent = args.task!;
-        }
-
         const generator = new PromptGenerator();
-        const finalPrompt = await generator.generate(taskContent);
+        let output: string;
+
+        if (args.mode === 'rule') {
+            // Rule generation mode
+            output = await generator.generateRule(args.description!);
+        } else {
+            // Task validation mode (default)
+            let taskContent: string;
+            if (args.taskFile) {
+                taskContent = await fs.readFile(args.taskFile, 'utf-8');
+            } else {
+                taskContent = args.task!;
+            }
+            output = await generator.generateTaskPrompt(taskContent);
+        }
 
         if (args.output) {
-            await fs.writeFile(args.output, finalPrompt);
-            console.log(`Prompt successfully saved to: ${args.output}`);
+            await fs.writeFile(args.output, output);
+            const messageType = args.mode === 'rule' ? 'Rule' : 'Prompt';
+            console.log(`${messageType} successfully saved to: ${args.output}`);
         } else {
-            console.log(finalPrompt);
+            console.log(output);
         }
     } catch (error) {
-        console.error('Error generating prompt:', error instanceof Error ? error.message : String(error));
+        console.error('Error generating output:', error instanceof Error ? error.message : String(error));
         process.exit(1);
     }
 }
