@@ -93,6 +93,19 @@ codeguardian check -c protect-critical-code.yaml -b main
 codeguardian check -c "rules/*.yaml" -b main
 ```
 
+4. **AI Coding Agent Workflow**: When using AI coding assistants, instruct them to run `codeguardian check` periodically or after completing tasks. The command provides clear violation information that helps the AI self-correct and stay aligned with your architectural rules:
+
+```bash
+# In your AI prompt, include:
+"After implementing the feature, run 'codeguardian check' to validate the changes 
+against our architectural rules. Fix any violations before considering the task complete."
+
+# If the AI forgets to check, prompt it:
+"Please run 'codeguardian check' to ensure your implementation follows our rules."
+```
+
+This workflow works similarly to instructing AI agents to run tests or linters—Code Guardian acts as an architectural linter that helps AI agents recover from potential hallucinations and maintain code quality.
+
 ## Rule Primitives
 
 ### Selectors
