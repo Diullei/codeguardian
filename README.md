@@ -1,6 +1,8 @@
 # Code Guardian
 
-**Code Guardian** is an open-source developer tool designed to validate and enforce architectural rules in codebases—especially valuable when dealing with AI-generated code. It automatically analyzes code after every change to preserve architectural integrity, enforce predefined standards, and reduce the risk of AI hallucinations, ensuring consistent, high-quality software structures.
+**Code Guardian** is an **experimental** developer tool designed to validate and enforce architectural rules in codebases—especially valuable when dealing with AI-generated code. It automatically analyzes code after every change to preserve architectural integrity, enforce predefined standards, and reduce the risk of AI hallucinations, ensuring consistent, high-quality software structures.
+
+> ⚠️ **Experimental Project**
 
 ## Overview
 
