@@ -42,27 +42,55 @@ npm install --save-dev codeguardian
 
 ## Quick Start
 
-1. Create a rule configuration file (e.g., `rules.yaml`):
+1. Create a rule configuration file to protect your codebase:
 
 ```yaml
-id: no-console-log
-description: Ensure no console.log statements in production code
+# protect-critical-code.yaml
+id: protect-core-auth
+description: Prevent modifications to authentication and security modules
 rule:
     type: for_each
     select:
         type: select_files
-        path_pattern: 'src/**/*.{js,ts}'
-        exclude_pattern: '**/*.test.*'
+        path_pattern: 'src/{auth,security}/**/*'
     assert:
-        type: assert_match
-        pattern: 'console\.log'
-        should_match: false
+        type: assert_property
+        property_path: 'status'
+        expected_value: 'unchanged'
+        operator: '=='
+        message: 'Critical security code should not be modified without review'
 ```
 
-2. Run check:
+2. Enforce architectural boundaries:
+
+```yaml
+# enforce-architecture.yaml
+id: clean-architecture
+description: Ensure domain logic doesn't depend on infrastructure
+rule:
+    type: for_each
+    select:
+        type: select_files
+        path_pattern: 'src/domain/**/*.{ts,js}'
+    assert:
+        type: none_of
+        rules:
+            - type: assert_match
+              pattern: 'from\s+["\'].*infrastructure'
+              message: 'Domain layer cannot import from infrastructure'
+            - type: assert_match
+              pattern: 'from\s+["\'].*database'
+              message: 'Domain layer cannot directly access database'
+```
+
+3. Run validation on your changes:
 
 ```bash
-codeguardian check -c rules.yaml -b main
+# Check changes between your feature branch and main
+codeguardian check -c protect-critical-code.yaml -b main
+
+# Check all rules in a directory
+codeguardian check -c "rules/*.yaml" -b main
 ```
 
 ## Rule Primitives
@@ -97,39 +125,154 @@ Combinators compose rules using logical operations:
 
 ## Examples
 
-### No Hardcoded Secrets
+### Protect Critical Infrastructure from AI Modifications
+
+When working with AI coding assistants, protect your critical infrastructure code:
 
 ```yaml
-id: no-secrets
-description: Prevent hardcoded secrets
+# protect-payment-system.yaml
+id: protect-payment-infrastructure
+description: Prevent AI from modifying payment processing code
 rule:
-    type: for_each
-    select:
-        type: select_files
-        path_pattern: '**/*'
-    assert:
-        type: none_of
-        rules:
-            - type: assert_match
-              pattern: 'api_key\s*=\s*["\''][^"\'']+["\'']'
-            - type: assert_match
-              pattern: 'AWS[A-Z0-9]{16,}'
+    type: none_of
+    rules:
+        # Block any modifications to payment processing
+        - type: for_each
+          select:
+              type: select_files
+              path_pattern: 'src/payments/**/*'
+              status: ['modified', 'deleted']
+          assert:
+              type: assert_match
+              pattern: '.*'
+              should_match: true
+              message: 'Payment system files cannot be modified by AI agents'
+        
+        # Block creation of new payment-related files
+        - type: for_each
+          select:
+              type: select_files
+              path_pattern: '**/payment*'
+              status: ['added']
+          assert:
+              type: assert_match
+              pattern: '.*'
+              should_match: true
+              message: 'New payment files require human review'
 ```
 
-### Clean Architecture
+### Prevent AI from Breaking Architecture Boundaries
+
+Ensure AI respects your architectural decisions:
 
 ```yaml
-id: clean-architecture
-description: Enforce layer boundaries
+# enforce-clean-architecture.yaml
+id: enforce-layer-boundaries
+description: Maintain architectural integrity across layers
 rule:
-    type: for_each
-    select:
-        type: select_files
-        path_pattern: 'src/domain/**/*.ts'
-    assert:
-        type: assert_match
-        pattern: 'from.*infrastructure'
-        should_match: false
+    type: all_of
+    rules:
+        # Domain layer independence
+        - type: for_each
+          select:
+              type: select_files
+              path_pattern: 'src/domain/**/*.{ts,js}'
+          assert:
+              type: none_of
+              rules:
+                  - type: assert_match
+                    pattern: 'from\s+["\'].*/(infrastructure|adapters|ui)'
+                    message: 'Domain layer must remain pure - no infrastructure dependencies'
+                  - type: assert_match
+                    pattern: 'import.*express|axios|prisma|mongoose'
+                    message: 'Domain layer cannot use framework-specific libraries'
+        
+        # Application layer can only depend on domain
+        - type: for_each
+          select:
+              type: select_files
+              path_pattern: 'src/application/**/*.{ts,js}'
+          assert:
+              type: assert_match
+              pattern: 'from\s+["\'].*/(infrastructure|adapters)'
+              should_match: false
+              message: 'Application layer cannot directly access infrastructure'
+```
+
+### Validate AI Task Implementation
+
+When AI completes a task, validate it actually did what was requested:
+
+```yaml
+# validate-auth-feature.yaml
+id: validate-jwt-implementation
+description: Ensure JWT authentication was properly implemented
+rule:
+    type: all_of
+    rules:
+        # Check the feature exists
+        - type: for_each
+          select:
+              type: select_files
+              path_pattern: 'src/auth/jwt.{ts,js}'
+              select_all: true  # Check current state, not just diff
+          assert:
+              type: all_of
+              rules:
+                  - type: assert_match
+                    pattern: 'verify.*token|jwt\.verify'
+                    message: 'JWT verification must be implemented'
+                  - type: assert_match
+                    pattern: 'sign.*token|jwt\.sign'
+                    message: 'JWT signing must be implemented'
+                  - type: assert_match
+                    pattern: 'RS256|ES256'  # Secure algorithms
+                    message: 'Must use secure signing algorithm'
+        
+        # Ensure no insecure patterns
+        - type: for_each
+          select:
+              type: select_files
+              path_pattern: 'src/auth/**/*.{ts,js}'
+          assert:
+              type: assert_match
+              pattern: 'algorithm.*HS256|none'  # Weak algorithms
+              should_match: false
+              message: 'Cannot use weak JWT algorithms'
+```
+
+### Monitor File Change Magnitude
+
+Prevent AI from making massive rewrites:
+
+```yaml
+# limit-ai-changes.yaml
+id: prevent-large-rewrites
+description: Ensure AI makes incremental changes, not complete rewrites
+rule:
+    type: all_of
+    rules:
+        # Flag files that are mostly rewritten
+        - type: for_each
+          select:
+              type: select_file_changes
+              min_percentage: 70
+          assert:
+              type: assert_match
+              pattern: '.*'
+              should_match: true
+              message: 'File rewritten by >70% - requires careful review'
+        
+        # Protect critical configs from large changes
+        - type: assert_count
+          select:
+              type: select_file_changes
+              min_percentage: 20
+          assert:
+              type: assert_match
+              pattern: 'package\.json|tsconfig|webpack\.config|.env'
+              should_match: false
+              message: 'Configuration files should not change more than 20%'
 ```
 
 ### AST-Based Validation
