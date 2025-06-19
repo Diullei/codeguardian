@@ -6,17 +6,15 @@
 
 ## Overview
 
-Code Guardian is a Git-aware validation tool that allows you to define complex validation rules for your codebase by composing simple, reusable primitives. It can analyze various types of changes in your repository:
+Code Guardian is a Git-aware validation tool that protects your codebase from unwanted changes—particularly useful when working with AI coding assistants. It enforces architectural boundaries, protects critical folders from modifications, and ensures dependency flow rules are followed.
 
-- **Committed changes**: Diff between two Git branches (e.g., main and your feature branch)
-- **Uncommitted changes**: Both staged and unstaged modifications in your working directory
-- **Deep source analysis**: Options to analyze the entire codebase, not just changes
+**Key benefits:**
+- **Protect critical code**: Prevent AI agents from modifying protected folders or files
+- **Enforce architecture**: Ensure domain code doesn't import from infrastructure layers
+- **Validate changes early**: Catch issues in Git diffs before they reach your main branch
+- **Compose simple rules**: Build complex validations from reusable primitives
 
-By default, it validates files that have been added, modified, deleted, or renamed, making it an ideal development tool for catching issues early - especially when working with AI-generated code. This focused approach helps developers quickly validate changes and prevent AI hallucinations from introducing architectural violations or security issues. It also provides options for comprehensive codebase analysis when needed.
-
-By default, Code Guardian scans configuration files named `<filename>.codeguardian.yaml`, `<filename>.codeguardian.yml`, `<filename>.cg.yaml`, or `<filename>.cg.yml`. If a file pattern is explicitly provided, it will instead scan only the files matching that pattern, with full support for shell-style wildcards (e.g., `**/*.yaml`).
-
-Instead of writing custom validation logic, you can combine selectors, assertions, and logical operators to create sophisticated rules that enforce coding standards, security policies, and architectural constraints on your code changes.
+Code Guardian analyzes only what changed (by default), making it fast and focused. It can validate committed changes between branches, uncommitted changes in your working directory, or perform deep analysis of the entire codebase when needed.
 
 ## Installation
 
