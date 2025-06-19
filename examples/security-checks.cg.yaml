@@ -1,0 +1,29 @@
+id: security-checks
+description: Prevent common security vulnerabilities
+rule:
+  type: all_of
+  rules:
+    # No hardcoded secrets
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*'
+        status: ['added', 'modified']
+      assert:
+        type: none_of
+        rules:
+          - type: assert_match
+            pattern: '(api_key|apikey|secret|password)\s*=\s*["\''][^"\'']+["\'']'
+          - type: assert_match
+            pattern: 'AWS[A-Z0-9]{16,}'
+
+    # No dangerous innerHTML usage
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*.{jsx,tsx}'
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: 'dangerouslySetInnerHTML'
+        should_match: false

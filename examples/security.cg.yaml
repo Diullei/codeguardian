@@ -1,0 +1,26 @@
+# Security-related validation rules
+id: security-checks
+description: Security validation rules for the codebase
+type: all_of
+rules:
+  - type: for_each
+    select:
+      type: select_files
+      path_pattern: '**/*.{js,ts,jsx,tsx}'
+    assert:
+      type: assert_match
+      pattern: '(api[_-]?key|password|secret|token)\s*=\s*["'']\w+["'']'
+      should_match: false
+      message: 'Potential hardcoded secret detected'
+      severity: error
+
+  - type: for_each
+    select:
+      type: select_files
+      path_pattern: '**/*.{js,ts}'
+    assert:
+      type: assert_match
+      pattern: 'eval\s*\('
+      should_match: false
+      message: 'Use of eval() is a security risk'
+      severity: error

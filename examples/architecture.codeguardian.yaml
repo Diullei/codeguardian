@@ -1,0 +1,26 @@
+# Architecture enforcement rules
+id: architecture-rules
+description: Enforce clean architecture boundaries
+type: all_of
+rules:
+  - type: for_each
+    select:
+      type: select_files
+      path_pattern: 'src/domain/**/*.ts'
+    assert:
+      type: assert_match
+      pattern: 'from\s+["'']\.\./\.\./infrastructure'
+      should_match: false
+      message: 'Domain layer should not depend on infrastructure'
+      severity: error
+
+  - type: for_each
+    select:
+      type: select_files
+      path_pattern: 'src/core/**/*.ts'
+    assert:
+      type: assert_match
+      pattern: 'from\s+["'']\.\./\.\./(adapters|cli|reporters)'
+      should_match: false
+      message: 'Core layer should not depend on outer layers'
+      severity: error

@@ -1,0 +1,338 @@
+id: codeguardian-architectural-validation
+description: Enforce architectural patterns and cross-file dependencies
+rule:
+  type: all_of
+  rules:
+    # ========================================================================
+    # RULE 1: Verify Rule Class Inheritance Architecture
+    # ========================================================================
+    # Why: All rule classes must inherit from one of the base classes to ensure
+    # they follow the architectural pattern and have required methods.
+    #
+    # What it checks: Any file ending with "Rule.ts" must contain either:
+    # - "extends BaseRule" (or SelectorRule, AssertionRule, CombinatorRule)
+    # - "abstract class" (for base classes themselves)
+    #
+    # Example violation:
+    #   export class MyRule {  // ❌ Missing extends
+    #     evaluate() { ... }
+    #   }
+    #
+    # Example compliance:
+    #   export class MyRule extends SelectorRule {  // ✅
+    #     evaluate() { ... }
+    #   }
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/**/*Rule.ts'
+        exclude_pattern: '**/index.ts'
+        status: ['added', 'modified']
+      assert:
+        type: any_of
+        rules:
+          - type: assert_match
+            pattern: 'extends (BaseRule|SelectorRule|AssertionRule|CombinatorRule)'
+            suggestion: 'All rule classes must extend from BaseRule, SelectorRule, AssertionRule, or CombinatorRule'
+            documentation: 'See src/core/Rule.ts for base rule classes'
+          - type: assert_match
+            pattern: 'abstract class.*Rule'
+
+    # ========================================================================
+    # RULE 2: Verify Builder Pattern Implementation
+    # ========================================================================
+    # Why: All rule builders must implement the RuleBuilder interface to work
+    # with the factory pattern. This architectural requirement ensures new rules
+    # can be created from YAML configurations.
+    #
+    # What it checks: Any file ending with "Builder.ts" in the config/builders
+    # directory must contain "implements RuleBuilder"
+    #
+    # Example violation:
+    #   export class MyBuilder {  // ❌ Missing interface
+    #     build(config) { ... }
+    #   }
+    #
+    # Example compliance:
+    #   export class MyBuilder implements RuleBuilder {  // ✅
+    #     build(config: any, factory: RuleFactory): Rule { ... }
+    #   }
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/config/builders/**/*Builder.ts'
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: 'implements RuleBuilder'
+        suggestion: 'Rule builders must implement the RuleBuilder interface to work with the factory pattern'
+        documentation: 'See src/types/index.ts for the RuleBuilder interface definition'
+
+    # ========================================================================
+    # RULE 3: Verify Factory Registration for New Builders
+    # ========================================================================
+    # Why: New rule types must be registered with the factory so they can be
+    # created from YAML. This cross-file dependency ensures the system knows
+    # how to instantiate rules from configuration.
+    #
+    # What it checks: When config/index.ts is modified, it should contain
+    # factory.register() calls to maintain the registration pattern
+    #
+    # Example:
+    #   factory.register('select_files', new SelectFilesBuilder());
+    #   factory.register('my_new_rule', new MyNewRuleBuilder());
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/config/index.ts'
+        status: ['modified']
+      assert:
+        type: assert_match
+        pattern: 'factory\.register\('
+
+    # ========================================================================
+    # RULE 4: Verify Test Uses Mock Context Pattern
+    # ========================================================================
+    # Why: Tests should use the createMockContext helper for consistency.
+    # This architectural pattern ensures all tests set up contexts the same way,
+    # making tests more maintainable and predictable.
+    #
+    # What it checks: Test files should use createMockContext helper
+    #
+    # Example compliance:
+    #   const context = createMockContext(files);  // ✅ Using helper
+    #   const result = await rule.evaluate(context);
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'tests/**/*.test.ts'
+        status: ['added', 'modified']
+      assert:
+        type: any_of
+        rules:
+          - type: assert_match
+            pattern: 'createMockContext'
+          - type: assert_match
+            pattern: '(describe|test|it)\s*\('
+
+    # ========================================================================
+    # RULE 5: Prevent Direct Assertion Evaluation (Architectural Rule)
+    # ========================================================================
+    # Why: This is a unique architectural constraint of Code Guardian.
+    # Assertions are designed to be used within combinators only.
+    # Direct evaluation will throw an error at runtime.
+    #
+    # What it checks: Code should not call .evaluate() on AssertionRule instances
+    #
+    # Example violation:
+    #   const assertion = new AssertMatchRule(...);
+    #   assertion.evaluate(context);  // ❌ Architectural violation
+    #
+    # Example compliance:
+    #   const rule = new ForEachRule(selector, assertion);  // ✅
+    #   rule.evaluate(context);  // Combinator handles assertion
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/**/*.ts'
+        exclude_pattern: '**/test*'
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: '\.evaluate\(.*AssertionRule'
+        should_match: false
+
+    # ========================================================================
+    # RULE 6: Validate Documentation Example Patterns
+    # ========================================================================
+    # Why: Documentation should use real rule type names, not category names.
+    # This prevents confusion and ensures examples actually work when copied.
+    #
+    # What it checks: YAML/Markdown files should not use generic type names
+    # like "selector", "assertion", or "combinator" as rule types
+    #
+    # Example violation in YAML:
+    #   type: selector  # ❌ Not a real rule type
+    #
+    # Example compliance:
+    #   type: select_files  # ✅ Actual rule type
+    #   type: assert_match  # ✅ Actual rule type
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*.{md,yaml}'
+        exclude_pattern: 'node_modules/**'
+        status: ['added', 'modified']
+      assert:
+        type: none_of
+        rules:
+          - type: assert_match
+            pattern: 'type:\s*(selector|assertion|combinator)\s*$'
+
+    # ========================================================================
+    # RULE 7: Verify Git Adapter Uses simple-git Library
+    # ========================================================================
+    # Why: This is an architectural decision to use simple-git for all Git
+    # operations. It provides a consistent API and proper error handling.
+    #
+    # What it checks: Adapter files must either:
+    # - Import simple-git library
+    # - Not be Git-related (checked by filename)
+    #
+    # Example compliance:
+    #   import simpleGit from 'simple-git';  // ✅ Using standard library
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/adapters/**/*.ts'
+        exclude_pattern: '**/index.ts'
+        status: ['added', 'modified']
+      assert:
+        type: any_of
+        rules:
+          - type: assert_match
+            pattern: 'import.*simple-git'
+          - type: assert_match
+            pattern: 'Git'
+            should_match: false
+
+    # ========================================================================
+    # RULE 8: Verify File Selectors Use minimatch Pattern
+    # ========================================================================
+    # Why: File selectors must use minimatch for glob pattern support.
+    # This architectural decision ensures consistent pattern matching
+    # across all file-based rules.
+    #
+    # What it checks: Only file-based selectors (SelectFilesRule) need minimatch.
+    # Other selectors like SelectLinesRule and SelectASTNodesRule don't need it.
+    #
+    # Example:
+    #   import { minimatch } from 'minimatch';  // ✅ Required for SelectFilesRule
+    #   if (minimatch(file.path, this.pattern)) { ... }
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/selectors/SelectFilesRule.ts'
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: 'minimatch'
+        suggestion: 'SelectFilesRule must import minimatch for file pattern matching'
+
+    # ========================================================================
+    # RULE 9: Verify AST Rules Support Required Languages
+    # ========================================================================
+    # Why: AST rules must declare which languages they support from our
+    # allowed set. This ensures users know what languages can be analyzed.
+    #
+    # What it checks: AST-related files must mention at least one supported
+    # language: typescript, javascript, tsx, html, or css
+    #
+    # Example:
+    #   type SupportedLanguage = 'typescript' | 'javascript' | 'tsx';  // ✅
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/**/*AST*.ts'
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: 'typescript|javascript|tsx|html|css'
+
+    # ========================================================================
+    # RULE 10: Verify Package.json Scripts Match CLAUDE.md Documentation
+    # ========================================================================
+    # Why: The package.json must provide the exact scripts documented in
+    # CLAUDE.md to ensure consistency between documentation and implementation.
+    #
+    # What it checks: package.json must contain all documented npm scripts
+    # with their expected commands
+    #
+    # Required scripts as documented:
+    # - build: "tsc" (compile TypeScript)
+    # - dev: "tsc --watch" (watch mode)
+    # - test: "jest" (run tests)
+    # - typecheck: "tsc --noEmit" (check types only)
+    # - lint: "eslint ..." (code quality)
+    # - clean: "rm -rf dist" (cleanup)
+    # - validate: runs codeguardian on the codebase
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'package.json'
+        status: ['modified']
+      assert:
+        type: all_of
+        rules:
+          - type: assert_match
+            pattern: '"build":\s*"tsc"'
+          - type: assert_match
+            pattern: '"dev":\s*"tsc --watch"'
+          - type: assert_match
+            pattern: '"test":\s*"jest"'
+          - type: assert_match
+            pattern: '"typecheck":\s*"tsc --noEmit"'
+          - type: assert_match
+            pattern: '"lint":\s*"eslint'
+            suggestion: 'Ensure the lint script is defined correctly: "lint": "eslint . --ext .ts"'
+            documentation: 'See CLAUDE.md for required npm scripts configuration'
+          - type: assert_match
+            pattern: '"clean":\s*"rm -rf dist"'
+
+    # ========================================================================
+    # RULE 11: Verify Rule evaluate() Returns Promise<RuleResult>
+    # ========================================================================
+    # Why: This is a core architectural requirement. All rules must return
+    # the same result structure for the engine to work properly.
+    #
+    # What it checks: Non-abstract rule files must have evaluate method
+    # with correct signature
+    #
+    # Example compliance:
+    #   async evaluate(context: EvaluationContext): Promise<RuleResult> {  // ✅
+    #     return { passed: true, violations: [] };
+    #   }
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/**/*Rule.ts'
+        exclude_pattern: '**/index.ts'
+        status: ['added', 'modified']
+      assert:
+        type: any_of
+        rules:
+          - type: assert_match
+            pattern: 'evaluate.*:\s*Promise<RuleResult>'
+          - type: assert_match
+            pattern: 'abstract (class|.*evaluate)'
+          - type: assert_match
+            pattern: 'extends (AssertionRule|SelectorRule|CombinatorRule)'
+
+    # ========================================================================
+    # RULE 12: Verify Test Structure for New Test Files
+    # ========================================================================
+    # Why: New test files should follow Jest structure conventions.
+    # This ensures consistent test organization across the codebase.
+    #
+    # What it checks: New test files must have both:
+    # - describe('...') blocks for grouping tests
+    # - it('...') blocks for individual test cases
+    #
+    # Example:
+    #   describe('SelectFilesRule', () => {  // ✅ Test suite
+    #     it('should select files by pattern', () => {  // ✅ Test case
+    #       expect(result).toEqual(expected);
+    #     });
+    #   });
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'tests/**/*.test.ts'
+        status: ['added']
+      assert:
+        type: all_of
+        rules:
+          - type: assert_match
+            pattern: "describe\\('"
+          - type: assert_match
+            pattern: "it\\('"

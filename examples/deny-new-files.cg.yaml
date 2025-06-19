@@ -1,0 +1,14 @@
+id: deny-new-files
+description: Ensure no new files are created - only existing files should be modified
+rule:
+  # Select all added files and fail if any exist
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: '**/*'
+    status: ['added']  # Only select files that were added
+  assert:
+    type: assert_match
+    pattern: '.*'  # Match any content
+    should_match: false  # This will always fail if any added file is found
+    message: 'New files are not allowed in this task. Only modifications to existing files are permitted.'

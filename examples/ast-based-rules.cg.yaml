@@ -1,0 +1,22 @@
+id: ast-based-validation
+description: Example of AST-based code validation
+rule:
+  type: all_of
+  rules:
+    # Find all async functions without try-catch
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*.{js,ts}'
+        status: ['added', 'modified']
+      assert:
+        type: for_each
+        select:
+          type: select_ast_nodes
+          query: 'async_function'
+          language: 'typescript'
+        assert:
+          type: assert_property
+          property_path: 'text'
+          expected_value: 'try'
+          operator: 'includes'

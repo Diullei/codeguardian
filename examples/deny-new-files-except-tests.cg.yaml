@@ -1,0 +1,14 @@
+id: deny-new-files-except-tests
+description: Prevent new files except for test files
+rule:
+  # Check that any added files are only test files
+  type: for_each
+  select:
+    type: select_files
+    status: ['added']
+    exclude_pattern: '**/*.test.*'  # Exclude test files from this check
+  assert:
+    type: assert_count
+    condition: '=='
+    value: 0
+    message: 'New files are not allowed except for test files. This task should only modify existing files.'

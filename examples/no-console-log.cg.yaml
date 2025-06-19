@@ -1,0 +1,19 @@
+# Example: No Console Logging in Production
+#
+# This rule checks files in the Git diff between base and head branches.
+# Only files that match the path pattern AND have the specified status
+# (added/modified) will be validated.
+
+id: no-console-log
+description: Ensure no console.log statements in production code
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: 'src/**/*.{js,ts,jsx,tsx}'
+    exclude_pattern: '**/*.test.*'
+    status: ['added', 'modified']
+  assert:
+    type: assert_match
+    pattern: 'console\.(log|debug|trace)'
+    should_match: false

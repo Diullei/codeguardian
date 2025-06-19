@@ -1,0 +1,26 @@
+id: clean-architecture
+description: Enforce clean architecture boundaries
+rule:
+  type: all_of
+  rules:
+    # Domain layer cannot depend on infrastructure
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/domain/**/*.ts'
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: 'from\s+["\''](\.\.\/|@\/)infrastructure'
+        should_match: false
+
+    # Application layer cannot depend on presentation
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/application/**/*.ts'
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: 'from\s+["\''](\.\.\/|@\/)presentation'
+        should_match: false

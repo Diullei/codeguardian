@@ -1,0 +1,28 @@
+id: typescript-component-validation
+description: Validate TypeScript component requirements
+rule:
+  type: all_of
+  rules:
+    # No dangerouslySetInnerHTML in components
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/components/**/*.tsx'
+        status: ['added', 'modified']
+      assert:
+        type: none_of
+        rules:
+          - type: assert_match
+            pattern: 'dangerouslySetInnerHTML'
+
+    # All new components should have tests
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/components/**/*.tsx'
+        status: ['added']
+      assert:
+        type: assert_property
+        property_path: 'path'
+        expected_value: 'Component'
+        operator: 'includes'

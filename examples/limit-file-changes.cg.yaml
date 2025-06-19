@@ -1,0 +1,12 @@
+id: limit-file-changes
+description: Prevent large changes to critical configuration files
+rule:
+  type: for_each
+  select:
+    type: select_file_changes
+    min_percentage: 10  # Select files that changed 10% or more
+  assert:
+    type: assert_match
+    pattern: 'package\.json|tsconfig\.json|\.eslintrc\.|jest\.config'
+    should_match: false
+    message: 'Critical configuration files should not change more than 10% in a single commit. Consider breaking this into smaller changes.'

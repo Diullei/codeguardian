@@ -1,0 +1,11 @@
+id: deny-new-files-in-src
+description: Prevent new files in the src directory - only allow modifications
+rule:
+  type: assert_count
+  select:
+    type: select_files
+    path_pattern: 'src/**/*'
+    status: ['added']
+  condition: '=='
+  value: 0
+  message: 'New files in the src/ directory are not allowed. This task should only update existing source files.'
