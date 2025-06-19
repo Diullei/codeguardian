@@ -108,9 +108,4 @@ export class PromptGenerator {
 
         return prompt;
     }
-
-    // Backward compatibility
-    public async generate(taskDescription: string): Promise<string> {
-        return this.generateTaskPrompt(taskDescription);
-    }
 }
