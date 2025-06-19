@@ -6,7 +6,80 @@ This document is a quick reference for creating validation rules using Code Guar
 
 When creating temporary validation rules to verify that a task has been implemented correctly (e.g., checking if a new feature was added), **you must use `select_all: true`** in your file selectors. This ensures the validation checks all files in the repository, not just modified files in the current diff.
 
-**Example:**
+### Critical: Protecting Folders During Task Validation
+
+When validating tasks, it's **extremely important** to create rules that protect folders and files that should not be modified. This prevents unintended changes to critical parts of your codebase.
+
+**Example Protection Rules:**
+
+```yaml
+# protect-critical-folders.cg.yaml
+id: protect-critical-folders
+description: Ensure no changes are made to protected directories
+rule:
+  type: none_of
+  rules:
+    # Protect test files from being modified
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'tests/**/*'
+        status: ['modified', 'deleted']
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: true
+        message: 'Test files should not be modified during this task'
+    
+    # Protect configuration files
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '{package.json,tsconfig.json,*.config.js}'
+        status: ['modified']
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: true
+        message: 'Configuration files should not be modified'
+    
+    # Protect documentation
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '{*.md,docs/**/*}'
+        status: ['modified', 'added', 'deleted']
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: true
+        message: 'Documentation should not be changed in this task'
+```
+
+**Best Practices for Task Validation:**
+
+1. **Always include protection rules** alongside your validation rules
+2. **Be specific** about which folders/files can be modified
+3. **Use exclude patterns** when appropriate:
+
+```yaml
+# Allow changes only in specific folders
+id: restrict-changes-to-src
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: '**/*'
+    exclude_pattern: 'src/features/new-feature/**/*'
+    status: ['modified', 'added']
+  assert:
+    type: assert_match
+    pattern: '.*'
+    should_match: false
+    message: 'Changes should only be made in src/features/new-feature/'
+```
+
+**Example Complete Task Validation:**
 
 ```yaml
 # task-validation.cg.yaml
@@ -254,6 +327,47 @@ should_match: false                # Optional. `false` to fail on match. Default
 suggestion: 'Avoid using dangerouslySetInnerHTML. Use React's children prop instead.' # Optional.
 documentation: 'https://reactjs.org/docs/dom-elements.html#dangerouslysetinnerhtml' # Optional.
 ```
+
+##### ⚠️ Important: Regex Pattern Escaping in YAML
+
+When writing regex patterns in YAML, be careful with backslash escaping:
+
+1. **Single-quoted strings** (Recommended for regex): Backslashes are preserved literally
+   ```yaml
+   pattern: 'console\.log'  # Correct: \. matches literal dot
+   pattern: '\(mu\)'        # Correct: \( and \) match literal parentheses
+   ```
+
+2. **Double-quoted strings**: Backslashes need to be escaped
+   ```yaml
+   pattern: "console\\.log"  # Need double backslash
+   pattern: "\\(mu\\)"      # Need double backslash for literal parentheses
+   ```
+
+3. **Common regex patterns that need escaping**:
+   ```yaml
+   # Literal dots
+   pattern: 'package\.json'
+   
+   # Literal parentheses
+   pattern: 'function\(arg1, arg2\)'
+   
+   # Special regex characters that need escaping: . ^ $ * + ? { } [ ] \ | ( )
+   pattern: 'array\[0\]'     # Literal brackets
+   pattern: 'price: \$100'   # Literal dollar sign
+   pattern: 'C\+\+'          # Literal plus signs
+   ```
+
+4. **Complex patterns with multiple special characters**:
+   ```yaml
+   # Wrong - will cause YAML parsing errors:
+   pattern: 'PyErr_SetString\(PyExc_ValueError, "Viscosity \(mu\) and Length \(L\) cannot be zero."\)'
+   
+   # Correct - properly escaped:
+   pattern: 'PyErr_SetString\(PyExc_ValueError, "Viscosity \(mu\) and Length \(L\) cannot be zero\."\)'
+   ```
+
+**Pro tip**: Always use single quotes for regex patterns in YAML to avoid confusion with escaping. Test your patterns in a regex tester first, then paste them into single-quoted YAML strings.
 
 #### `assert_count`
 
