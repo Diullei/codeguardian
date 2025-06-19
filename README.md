@@ -243,30 +243,6 @@ Output Options:
   -h, --help     Show help
 ```
 
-### Generate Prompt Command
-
-Generate AI prompts for creating task validation rules:
-
-```bash
-codeguardian generate-prompt [options]
-
-Options:
-      --task       The task description for the AI                    [string]
-      --task-file  Path to a file containing the task description     [string]
-  -o, --output     Path to save the generated prompt file              [string]
-
-Examples:
-  # Generate prompt from task description
-  $ codeguardian generate-prompt --task "Add user authentication to the API"
-
-  # Generate prompt from file
-  $ codeguardian generate-prompt --task-file feature-request.txt
-
-  # Save prompt to file
-  $ codeguardian generate-prompt --task "Add logging middleware" -o prompt.txt
-```
-
-The `generate-prompt` command helps you create structured prompts for AI assistants to write Code Guardian validation rules. It combines your task description with Code Guardian's rule-writing cheat sheet to produce a comprehensive prompt that guides the AI in creating appropriate validation rules for your specific implementation task.
 
 ### Analysis Modes
 
@@ -397,6 +373,52 @@ property_path: 'status' # Property path
 expected_value: 'added' # Expected value
 operator: '==' # Comparison operator
 ```
+
+## Generating Rules with AI
+
+Code Guardian provides a comprehensive [Cheat Sheet](Cheat_Sheet.md) that serves as both a reference guide and a foundation for AI-assisted rule generation. This document contains detailed information about all available selectors, assertions, combinators, and common patterns.
+
+### Two Approaches for Rule Generation
+
+#### 1. Manual Reference
+Read the [Cheat Sheet](Cheat_Sheet.md) to understand how to write rules directly. The cheat sheet includes:
+- Complete syntax reference for all rule types
+- Common patterns and examples
+- Best practices for different validation scenarios
+- Special notes for task validation rules
+
+#### 2. AI-Assisted Generation
+Use the Cheat Sheet content with AI tools to generate rules automatically:
+
+1. **Prepare your context**: Use a tool like [Repomix](https://repomix.com/) to generate a comprehensive summary of your codebase
+2. **Create your prompt**: Combine:
+   - The full content of [Cheat_Sheet.md](Cheat_Sheet.md)
+   - Your codebase information (from Repomix or similar)
+   - Your specific validation requirements
+3. **Generate rules**: Ask your preferred AI (Claude, ChatGPT, etc.) to create Code Guardian rules based on your requirements
+
+### Example AI Prompt Structure
+
+```
+Here's the Code Guardian rule syntax guide:
+[paste Cheat_Sheet.md content]
+
+Here's my codebase structure:
+[paste Repomix output or codebase summary]
+
+Please generate a Code Guardian rule that:
+- Ensures no console.log statements in production code
+- Validates that all async functions have try-catch blocks
+- Enforces that domain layer doesn't import from infrastructure
+```
+
+### Tips for Effective Rule Generation
+
+- **Be specific**: Clearly describe what you want to validate
+- **Provide context**: Include relevant code examples or architectural decisions
+- **Start simple**: Begin with basic rules and gradually add complexity
+- **Test iteratively**: Generate, test, and refine your rules
+- **Use task validation**: For temporary validation of specific implementations, remember to use `select_all: true`
 
 ## License
 

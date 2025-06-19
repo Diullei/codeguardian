@@ -156,6 +156,13 @@ const cli = yargs(hideBin(process.argv))
                 );
         },
         async (args) => {
+            // Check if experimental features are enabled
+            if (!process.env.CODEGUARDIAN_EXPERIMENTAL) {
+                console.error('Error: The generate-prompt command is experimental and requires the CODEGUARDIAN_EXPERIMENTAL environment variable to be set.');
+                console.error('To enable experimental features, run:');
+                console.error('  export CODEGUARDIAN_EXPERIMENTAL=1');
+                process.exit(1);
+            }
             await runPromptGeneration(args);
         }
     )
