@@ -140,6 +140,29 @@ Combinators compose rules using logical operations:
 
 ## Examples
 
+### Real-World Mode Example: Catching Untracked Violations
+
+Imagine you accidentally create a test file in the wrong location:
+
+```bash
+# Oops! Created a test file outside the tests/ directory
+echo "describe('test', () => {});" > src/mytest.test.js
+```
+
+With **default mode (diff)**, this violation won't be caught until you stage it:
+```bash
+codeguardian check              # ✅ Passes - file is untracked
+git add src/mytest.test.js     # Stage the file
+codeguardian check              # ❌ NOW it fails!
+```
+
+With **all mode**, violations are caught immediately:
+```bash
+codeguardian check --mode=all   # ❌ Fails immediately - catches untracked file!
+```
+
+This is why protective rules often benefit from `--mode=all` or `select_all: true`.
+
 ### Protect Critical Infrastructure from AI Modifications
 
 When working with AI coding assistants, protect your critical infrastructure code:
@@ -416,31 +439,59 @@ Output Options:
 
 ### Analysis Modes
 
-Code Guardian can analyze your codebase in different ways:
+Code Guardian offers three validation modes to check different scopes of your codebase:
 
-1. **Committed Changes** (default): Compare two Git branches
-   ```bash
-   # Compare feature branch with main
-   codeguardian check -b main --head feature-branch
-   ```
+#### 1. **Diff Mode** (default) - Check Only Changed Files
+Validates files that have changed between two Git branches/commits. Perfect for CI/CD and PR reviews.
 
-2. **Uncommitted Changes**: Analyze staged and unstaged modifications
-   ```bash
-   # Check changes in working directory against HEAD
-   codeguardian check -b HEAD
-   
-   # Check staged changes against main
-   codeguardian check -b main --head HEAD
-   ```
+```bash
+# Check changes between your branch and main
+codeguardian check              # Default: compares HEAD with main
+codeguardian check -b develop   # Compare HEAD with develop
+```
 
-3. **Deep Source Analysis**: Analyze entire codebase using `select_all: true`
-   ```yaml
-   # In your rule file:
-   select:
-     type: select_files
-     path_pattern: '**/*.ts'
-     select_all: true  # Analyzes all files, not just changes
-   ```
+**Use when**: You want fast, focused validation on what's changed
+
+#### 2. **All Mode** - Check Entire Working Directory
+Validates ALL files including tracked, untracked, and ignored files. Catches violations immediately, even before committing.
+
+```bash
+# Check everything in your working directory
+codeguardian check --mode=all
+codeguardian check -m all      # Short form
+```
+
+**Use when**: 
+- Enforcing project-wide standards (no yarn.lock, no test files outside tests/)
+- Catching violations in newly created files before staging
+- Running comprehensive validation
+
+#### 3. **Staged Mode** - Check Only Staged Files
+Validates only files in your Git staging area. Ideal for pre-commit hooks.
+
+```bash
+# Check only what you're about to commit
+codeguardian check --mode=staged
+codeguardian check -m staged    # Short form
+```
+
+**Use when**: Setting up pre-commit hooks or validating before committing
+
+### Mode vs select_all: What's the Difference?
+
+- **Mode** controls which files Code Guardian sees from your filesystem
+- **select_all** in rules controls whether to check against the diff or all repository files
+
+Example:
+```yaml
+# This rule with select_all: true ALWAYS checks all repository files
+# regardless of the --mode flag
+type: for_each
+select:
+  type: select_files
+  path_pattern: 'yarn.lock'
+  select_all: true  # Ignores mode, always checks if yarn.lock exists anywhere
+```
 
 ### Configuration File Discovery
 

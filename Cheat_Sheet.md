@@ -2,28 +2,69 @@
 
 This document is a quick reference for creating validation rules using Code Guardian's YAML-based configuration.
 
-## Protection Levels
+## Validation Modes
 
-Code Guardian supports two protection levels, each serving different validation needs:
+### 🎯 Understanding Modes vs select_all
+
+**Modes** control what files Code Guardian can see:
+- `--mode=diff` (default) - Only files changed between branches
+- `--mode=all` - ALL files in working directory (including untracked)
+- `--mode=staged` - Only files in Git staging area
+
+**select_all** in rules controls the validation scope:
+- `select_all: false` (default) - Validate against mode's file list
+- `select_all: true` - Always validate against entire repository
+
+### Mode Quick Reference
+
+| Mode | Command | What it checks | Use case |
+|------|---------|----------------|----------|
+| diff | `codeguardian check` | Changed files between branches | CI/CD, PR reviews |
+| all | `codeguardian check --mode=all` | Everything including untracked | Catch violations early |
+| staged | `codeguardian check --mode=staged` | Staged files only | Pre-commit hooks |
+
+### Common Confusion: Mode + select_all
+
+```yaml
+# Example 1: Development rule (respects mode)
+type: for_each
+select:
+  type: select_files
+  path_pattern: '**/*.test.js'
+  # No select_all, so:
+  # - With --mode=diff: Only checks test files that changed
+  # - With --mode=all: Checks ALL test files in working directory
+
+# Example 2: Protective rule (ignores mode)
+type: for_each
+select:
+  type: select_files
+  path_pattern: 'yarn.lock'
+  select_all: true  # ALWAYS checks entire repository
+  # Mode doesn't matter - will always look for yarn.lock everywhere
+```
+
+## Protection Levels
 
 ### 🛡️ Protective Rules (Absolute Protection)
 Use `select_all: true` to enforce critical standards across the **entire codebase**:
 - **When to use**: Runtime safety, security patterns, project standards, compliance
-- **Behavior**: Checks all files regardless of Git changes
+- **Behavior**: Checks all repository files regardless of mode or Git changes
 - **Example use cases**: No yarn.lock, no eval(), no secrets, required licenses
+- **Recommended**: Run with `--mode=all` to catch untracked violations
 
 ### 📈 Development Rules (Progressive Protection)  
 Use diff-based checking (default) for incremental improvements:
 - **When to use**: Code patterns, architecture rules, style conventions
-- **Behavior**: Checks only files in Git diff (added/modified/deleted)
+- **Behavior**: Checks files based on mode selection
 - **Example use cases**: Naming conventions, import restrictions, code patterns
 
 ### Best Practice
 Organize rules into separate files by protection level:
 ```
 .codeguardian/
-  protective-rules.yaml   # Absolute requirements
-  development-rules.yaml  # Progressive improvements
+  protective-rules.yaml   # Absolute requirements (use select_all: true)
+  development-rules.yaml  # Progressive improvements (mode-aware)
 ```
 
 ## ⚠️ Important: Task Implementation Validation
@@ -203,7 +244,38 @@ language: 'typescript' # Required. The language to parse.
 - **Supported Languages**: `typescript`, `javascript`, `tsx`, `html`, `css`.
 - **`query`**: Refer to [ast-grep playground](https://ast-grep.github.io/playground.html) to craft queries.
 
-##### Pattern Syntax Guide
+## Mode Troubleshooting
+
+### "Why isn't my rule catching this file?"
+
+1. **File is untracked?** → Use `--mode=all`
+   ```bash
+   # Default mode won't see untracked files
+   codeguardian check --mode=all
+   ```
+
+2. **Rule uses select_all?** → Mode doesn't matter
+   ```yaml
+   select_all: true  # This rule sees everything regardless of mode
+   ```
+
+3. **File not staged?** → Stage it or use `--mode=all`
+   ```bash
+   git add myfile.js           # Option 1: Stage it
+   codeguardian check --mode=all  # Option 2: Use all mode
+   ```
+
+### "Why is my rule checking too many files?"
+
+Your rule might have `select_all: true`. This makes it check the entire repository regardless of mode:
+```yaml
+select:
+  type: select_files
+  path_pattern: '**/*.js'
+  select_all: true  # Remove this to respect mode
+```
+
+# Pattern Syntax Guide
 
 **Basic Pattern Matching**
 Patterns match through the full syntax tree, including nested expressions:
