@@ -1,11 +1,14 @@
 id: deny-new-files-in-src
 description: Prevent new files in the src directory - only allow modifications
 rule:
-  type: assert_count
+  # Select all added files in src/ and fail if any exist
+  type: for_each
   select:
     type: select_files
     path_pattern: 'src/**/*'
-    status: ['added']
-  condition: '=='
-  value: 0
-  message: 'New files in the src/ directory are not allowed. This task should only update existing source files.'
+    status: ['added']  # Only select files that were added
+  assert:
+    type: assert_match
+    pattern: '.*'  # Match any content
+    should_match: false  # This will always fail if any added file is found
+    message: 'New files in the src/ directory are not allowed. This task should only update existing source files.'
