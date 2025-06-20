@@ -81,3 +81,40 @@ rule:
           - type: assert_match
             pattern: '"typecheck":\s*"tsc --noEmit"'
             message: 'package.json must have typecheck script: "typecheck": "tsc --noEmit"'
+
+    # ========================================================================
+    # RULE 4: No Test Files Outside Tests Directory
+    # ========================================================================
+    # Why: Test files should be organized in the tests directory for consistency
+    # and to maintain a clean project structure.
+    #
+    # Protection Level: ABSOLUTE - Enforce test file organization
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*.{test,spec}.{ts,js,tsx,jsx}'
+        exclude_pattern: 'tests/**/*'
+        status: ['added']  # Only check newly added test files
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: false
+        message: 'Test files must be created in the tests/ directory, not outside of it'
+
+    # ========================================================================
+    # RULE 5: No Markdown Files in Project Root
+    # ========================================================================
+    # Why: Keep the project root clean. Documentation should be organized
+    # in appropriate subdirectories.
+    #
+    # Protection Level: ABSOLUTE - Maintain clean project root
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '*.md'
+        status: ['added']  # Only check newly added markdown files
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: false
+        message: 'New markdown files cannot be created in the project root. Place documentation in appropriate subdirectories.'
