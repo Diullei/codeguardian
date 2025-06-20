@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 # VERY IMPORTANT:
 
-YOU SHOULD ALWAYS run `npm run check` before committing to ensure all rules pass against the latest code changes. This ensures code quality and compliance with defined rules.
+YOU SHOULD ALWAYS run `npm run check:all` before committing to ensure all rules pass against the latest code changes. This ensures code quality and compliance with defined rules across the entire working directory, not just changed files.
 
 # Build and Development Commands
 

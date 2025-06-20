@@ -35,7 +35,7 @@ rule:
         type: assert_match
         pattern: '.*'
         should_match: false
-        message: 'yarn.lock file is not allowed. This project uses npm exclusively. Please remove yarn.lock and use package-lock.json instead.'
+        suggestion: 'Remove yarn.lock file. This project uses npm exclusively. Use package-lock.json instead.'
 
     # ========================================================================
     # RULE 2: Prevent Direct Assertion Evaluation (Runtime Safety)
@@ -55,7 +55,7 @@ rule:
         type: assert_match
         pattern: '\.evaluate\(.*AssertionRule'
         should_match: false
-        message: 'Direct assertion evaluation causes runtime errors. Use assertions within combinators.'
+        suggestion: 'Use assertions within combinators (e.g., for_each) instead of direct evaluation.'
 
     # ========================================================================
     # RULE 3: Verify Package.json Required Scripts
@@ -74,13 +74,13 @@ rule:
         rules:
           - type: assert_match
             pattern: '"build":\s*"tsc"'
-            message: 'package.json must have build script: "build": "tsc"'
+            suggestion: 'Add build script to package.json: "build": "tsc"'
           - type: assert_match
             pattern: '"test":\s*"jest"'
-            message: 'package.json must have test script: "test": "jest"'
+            suggestion: 'Add test script to package.json: "test": "jest"'
           - type: assert_match
             pattern: '"typecheck":\s*"tsc --noEmit"'
-            message: 'package.json must have typecheck script: "typecheck": "tsc --noEmit"'
+            suggestion: 'Add typecheck script to package.json: "typecheck": "tsc --noEmit"'
 
     # ========================================================================
     # RULE 4: No Test Files Outside Tests Directory
@@ -99,7 +99,7 @@ rule:
         type: assert_match
         pattern: '.*'
         should_match: false
-        message: 'Test files must be created in the tests/ directory, not outside of it'
+        suggestion: 'Move test files to the tests/ directory'
 
     # ========================================================================
     # RULE 5: No Markdown Files in Project Root
@@ -117,4 +117,42 @@ rule:
         type: assert_match
         pattern: '.*'
         should_match: false
-        message: 'New markdown files cannot be created in the project root. Place documentation in appropriate subdirectories.'
+        suggestion: 'Place markdown files in appropriate subdirectories (e.g., docs/, .github/, etc.)'
+
+    # ========================================================================
+    # RULE 6: Only Markdown Files in .claude/commands
+    # ========================================================================
+    # Why: The .claude/commands directory should contain only markdown files
+    # with instructions. File names should be intuitive commands, and the
+    # content should be the instructions themselves.
+    #
+    # Protection Level: ABSOLUTE - Enforce command documentation standards
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '.claude/commands/**/*'
+        exclude_pattern: '.claude/commands/**/*.md'
+        status: ['added']  # Check newly added files
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: false
+        suggestion: 'Only .md files allowed in .claude/commands/. Rename to .md or remove file.'
+
+    # ========================================================================
+    # RULE 7: No Shell Scripts in Project Root
+    # ========================================================================
+    # Why: Shell scripts in the project root can clutter the directory and
+    # should be organized in appropriate subdirectories like scripts/ or bin/.
+    #
+    # Protection Level: ABSOLUTE - Maintain clean project root
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '*.sh'
+        status: ['added']  # Only check newly added shell scripts
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: false
+        suggestion: 'Move shell scripts to scripts/ or bin/ directory'
