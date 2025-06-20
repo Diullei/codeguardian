@@ -2,7 +2,7 @@
 
 **Code Guardian** is an **experimental** developer tool designed to validate and enforce architectural rules in codebases—especially valuable when dealing with AI-generated code. It automatically analyzes code after every change to preserve architectural integrity, enforce predefined standards, and reduce the risk of AI hallucinations, ensuring consistent, high-quality software structures.
 
-> ⚠️ **Experimental Project**
+> ⚠️ **Experimental Project**: Currently in beta. APIs and features may change.
 
 ## Overview
 
@@ -18,16 +18,16 @@ Code Guardian analyzes only what changed (by default), making it fast and focuse
 
 ## Installation
 
-Install Code Guardian globally:
+Code Guardian is currently in beta. Install it globally:
 
 ```bash
-npm install -g codeguardian
+npm install -g codeguardian@beta
 ```
 
 Or add it as a development dependency to your project:
 
 ```bash
-npm install --save-dev codeguardian
+npm install --save-dev codeguardian@beta
 ```
 
 ### Running Without Installation
@@ -35,7 +35,7 @@ npm install --save-dev codeguardian
 You can also run Code Guardian directly using `npx`:
 
 ```bash
-npx codeguardian check
+npx codeguardian@beta check
 ```
 
 ### Contributing
