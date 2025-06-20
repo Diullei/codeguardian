@@ -7,7 +7,7 @@ import * as path from 'path';
 import { GitRepository } from '../adapters';
 import { createRuleFactory, ConfigurationLoader } from '../config';
 import { ResultCache } from '../core';
-import { EvaluationContext } from '../types';
+import { EvaluationContext, Mode } from '../types';
 import { ConsoleReporter, JsonReporter, ValidationReport } from '../reporters';
 import { PromptGenerator } from '../prompt-generator';
 
@@ -18,6 +18,7 @@ interface ValidateArgs {
     base: string;
     head?: string;
     format?: 'console' | 'json';
+    mode?: Mode;
     skipMissingAstGrep?: boolean;
 }
 
@@ -75,6 +76,13 @@ const cli = yargs(hideBin(process.argv))
                     choices: ['console', 'json'] as const,
                     description: 'Output format for validation results',
                     default: 'console',
+                })
+                .option('mode', {
+                    alias: 'm',
+                    type: 'string',
+                    choices: ['diff', 'all', 'staged'] as const,
+                    description: 'What to check: diff (changes between branches), all (entire working directory), staged (staged files only)',
+                    default: 'diff',
                 })
                 .option('skip-missing-ast-grep', {
                     type: 'boolean',
@@ -208,6 +216,7 @@ async function runValidation(args: ValidateArgs) {
         diff,
         cache: new ResultCache(),
         config: { type: 'placeholder' },
+        mode: args.mode || 'diff',
         cliArgs: {
             skipMissingAstGrep: args.skipMissingAstGrep,
         },
@@ -218,6 +227,7 @@ async function runValidation(args: ValidateArgs) {
     let totalPassed = 0;
     let totalFailed = 0;
     let totalViolations = 0;
+    let totalFiles = 0;
 
     for (const loadedConfig of configurations) {
         const configData = loadedConfig.content;
@@ -256,13 +266,24 @@ async function runValidation(args: ValidateArgs) {
     }
 
     // Create validation report
+    // Get actual file count based on mode
+    if (args.mode === 'all') {
+        const allFiles = await repository.getFiles(diff, 'all');
+        totalFiles = allFiles.length;
+    } else if (args.mode === 'staged') {
+        const stagedFiles = await repository.getFiles(diff, 'staged');
+        totalFiles = stagedFiles.length;
+    } else {
+        totalFiles = diff.files.length;
+    }
+
     const duration = Date.now() - startTime;
     const overallPassed = totalFailed === 0;
 
     const report: ValidationReport = {
         passed: overallPassed,
         summary: {
-            totalFiles: diff.files.length,
+            totalFiles,
             passedRules: totalPassed,
             failedRules: totalFailed,
             violations: totalViolations,

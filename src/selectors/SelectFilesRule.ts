@@ -16,7 +16,7 @@ export class SelectFilesRule extends SelectorRule {
     async select(context: EvaluationContext): Promise<FileInfo[]> {
         const allFiles = this.selectAll
             ? await context.repository.getAllFiles()
-            : await context.repository.getFiles(context.diff);
+            : await context.repository.getFiles(context.diff, context.mode);
 
         return allFiles.filter(file => {
             if (this.pathPattern && !minimatch(file.path, this.pathPattern)) {

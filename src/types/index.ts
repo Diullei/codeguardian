@@ -8,6 +8,8 @@ export type CountCondition = '>' | '>=' | '<' | '<=' | '==' | '!=';
 
 export type ComparisonOperator = '==' | '!=' | '>' | '<' | '>=' | '<=' | 'includes' | 'matches';
 
+export type Mode = 'diff' | 'all' | 'staged';
+
 export interface Violation {
     file?: string;
     line?: number;
@@ -60,7 +62,7 @@ export interface DiffInfo {
 }
 
 export interface Repository {
-    getFiles(diff: DiffInfo): Promise<FileInfo[]>;
+    getFiles(diff: DiffInfo, mode?: Mode): Promise<FileInfo[]>;
     getAllFiles(): Promise<FileInfo[]>;
     getFileContent(path: string): Promise<string>;
     getDiff(baseBranch: string, headBranch: string): Promise<DiffInfo>;
@@ -87,6 +89,7 @@ export interface EvaluationContext {
     cache: ResultCache;
     config: RuleConfig;
     currentItem?: any;
+    mode?: Mode;
     cliArgs?: {
         skipMissingAstGrep?: boolean;
     };

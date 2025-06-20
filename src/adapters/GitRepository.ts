@@ -1,7 +1,7 @@
 import simpleGit, { SimpleGit } from 'simple-git';
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { Repository, FileInfo, DiffInfo, FileStatus } from '../types';
+import { Repository, FileInfo, DiffInfo, FileStatus, Mode } from '../types';
 
 export class GitRepository implements Repository {
     private git: SimpleGit;
@@ -10,8 +10,23 @@ export class GitRepository implements Repository {
         this.git = simpleGit(repoPath);
     }
 
-    async getFiles(diff: DiffInfo): Promise<FileInfo[]> {
-        return diff.files;
+    async getFiles(diff: DiffInfo, mode: Mode = 'diff'): Promise<FileInfo[]> {
+        switch (mode) {
+            case 'diff':
+                // Default behavior - return files from diff
+                return diff.files;
+            
+            case 'all':
+                // Return all files in working directory (tracked and untracked)
+                return this.getAllWorkingFiles();
+            
+            case 'staged':
+                // Return only staged files
+                return this.getStagedFiles();
+            
+            default:
+                return diff.files;
+        }
     }
 
     async getAllFiles(): Promise<FileInfo[]> {
@@ -161,5 +176,103 @@ export class GitRepository implements Repository {
         } else {
             return 'modified';
         }
+    }
+
+    private async getAllWorkingFiles(): Promise<FileInfo[]> {
+        // Get all tracked files
+        const lsFiles = await this.git.raw(['ls-files']);
+        const trackedFiles = lsFiles
+            .trim()
+            .split('\n')
+            .filter(f => f);
+
+        // Get status to find untracked and modified files
+        const status = await this.git.status();
+
+        // Create a map to track file statuses
+        const fileStatusMap = new Map<string, FileStatus>();
+
+        // Mark tracked files as 'modified' by default
+        trackedFiles.forEach(file => {
+            fileStatusMap.set(file, 'modified');
+        });
+
+        // Mark new/untracked files as 'added'
+        [...status.not_added, ...status.created].forEach(file => {
+            fileStatusMap.set(file, 'added');
+        });
+
+        // Mark modified files
+        status.modified.forEach(file => {
+            fileStatusMap.set(file, 'modified');
+        });
+
+        // Mark deleted files
+        status.deleted.forEach(file => {
+            fileStatusMap.set(file, 'deleted');
+        });
+
+        // Mark renamed files
+        status.renamed.forEach((rename) => {
+            fileStatusMap.set(rename.to, 'renamed');
+        });
+
+        // Convert to FileInfo array
+        const files: FileInfo[] = await Promise.all(
+            Array.from(fileStatusMap.entries()).map(async ([filePath, status]) => {
+                const fileInfo: FileInfo = {
+                    path: filePath,
+                    status,
+                    insertions: 0,
+                    deletions: 0,
+                };
+
+                // Get content for non-deleted files
+                if (status !== 'deleted') {
+                    try {
+                        fileInfo.content = await this.getFileContent(filePath);
+                    } catch (error) {
+                        // File might not be readable
+                    }
+                }
+
+                return fileInfo;
+            })
+        );
+
+        return files;
+    }
+
+    private async getStagedFiles(): Promise<FileInfo[]> {
+        // Get staged files using git diff --cached
+        const stagedDiff = await this.git.diffSummary(['--cached']);
+
+        const files: FileInfo[] = await Promise.all(
+            stagedDiff.files.map(async (file: any) => {
+                const status = this.mapGitStatus(file);
+                const fileInfo: FileInfo = {
+                    path: file.file,
+                    status,
+                    insertions: file.insertions || 0,
+                    deletions: file.deletions || 0,
+                };
+
+                if (file.binary === false && status !== 'deleted') {
+                    try {
+                        fileInfo.content = await this.getFileContent(file.file);
+                    } catch (error) {
+                        // File might not exist
+                    }
+                }
+
+                if (status === 'renamed' && 'from' in file && file.from) {
+                    fileInfo.oldPath = file.from;
+                }
+
+                return fileInfo;
+            })
+        );
+
+        return files;
     }
 }

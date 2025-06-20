@@ -12,7 +12,7 @@ export class SelectFileChangesRule extends SelectorRule {
 
     async select(context: EvaluationContext): Promise<FileInfo[]> {
         // Get all files from the diff
-        const allFiles = await context.repository.getFiles(context.diff);
+        const allFiles = await context.repository.getFiles(context.diff, context.mode);
 
         // Filter for modified or added files (percentage is most relevant for these)
         const relevantFiles = allFiles.filter(
