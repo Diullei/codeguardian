@@ -3,9 +3,16 @@
   "version": "1.0.0",
   "description": "Open-source developer tool to validate and enforce architectural rules, especially for AI-generated code",
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "codeguardian": "./dist/cli/index.js"
   },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE",
+    "Cheat_Sheet.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -24,10 +31,24 @@
     "ci-cd",
     "rule-engine",
     "ast",
-    "code-quality"
+    "code-quality",
+    "ai-code-review",
+    "architecture-validation",
+    "git-diff",
+    "code-guardian",
+    "linter",
+    "architectural-rules"
   ],
-  "author": "",
+  "author": "Diullei Gomes <diullei@gmail.com>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/diullei/codeguardian.git"
+  },
+  "bugs": {
+    "url": "https://github.com/diullei/codeguardian/issues"
+  },
+  "homepage": "https://github.com/diullei/codeguardian#readme",
   "engines": {
     "node": ">=16.0.0"
   },
