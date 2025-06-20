@@ -21,7 +21,7 @@ export class ConsoleReporter implements ValidationReporter {
         console.log(this.color('validation session starts', 'cyan', 'bright'));
         console.log(`platform ${process.platform} -- Node ${process.version}, codeguardian-1.0.0`);
         console.log(`rootdir: ${process.cwd()}`);
-        console.log(`collected ${report.summary.totalFiles} files`);
+        console.log(`collected ${report.summary.totalFiles} files, ${report.summary.passedRules + report.summary.failedRules} rules`);
         console.log('');
 
         // Violations (keep existing detailed format)
