@@ -2,6 +2,32 @@
 
 All notable changes to Code Guardian will be documented in this file.
 
+## [0.1.0-beta.3] - 2025-01-20
+
+### Added
+- **Command Execution Rules**: New rules for validating build commands and npm scripts
+  - `assert_command_success`: Validate that commands execute successfully
+  - `assert_command_output`: Assert specific patterns in command output
+  - Rule to prevent disabling critical npm scripts
+- **Enhanced Property Assertions**: `assert_property` now supports regex value extraction
+  - Extract and validate values using `value_regex` parameter
+  - Useful for checking version numbers, configuration values, etc.
+- **Improved Reporting**: 
+  - Granular rule counting shows exactly how many rules were evaluated
+  - Better violation messages with context
+- **Documentation**: 
+  - Added documentation for command execution features
+  - Added documentation for suggestion field in violations
+
+### Changed
+- Migrated to ESLint v9 flat config format
+- Updated npm scripts to exclude tests directory from checks
+- Enhanced rule evaluation with better error handling
+
+### Fixed
+- Improved test coverage for new features
+- Fixed edge cases in command execution validation
+
 ## [0.1.0-beta.2] - 2024-01-20
 
 ### Added
