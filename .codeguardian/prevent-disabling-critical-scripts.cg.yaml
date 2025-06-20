@@ -1,0 +1,13 @@
+id: prevent-disabling-critical-scripts
+description: Prevents critical npm scripts from being disabled or replaced with dummy commands
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: 'package.json'
+    status: ['modified']
+  assert:
+    type: assert_match
+    # This pattern looks for a critical script key followed by a dummy command.
+    pattern: '"(build|test|lint|typecheck|check|format)":\s*".*(echo|true|:|#).*"'
+    should_match: false # We should NOT find any of these disabled commands
