@@ -1,0 +1,115 @@
+# ============================================================================
+# DEVELOPMENT RULES - Progressive Protection Level
+# ============================================================================
+# These rules check only changed files (diff-based) to provide focused feedback
+# during development. They help maintain code quality and architectural patterns
+# while allowing teams to improve incrementally.
+#
+# WHEN TO USE DEVELOPMENT RULES:
+# - Code pattern enforcement on new/modified code
+# - Architecture rules for changes
+# - Style/convention checks
+# - Progressive quality improvements
+# ============================================================================
+
+id: codeguardian-development-rules
+description: Enforce architectural patterns and conventions on changed files
+rule:
+  type: all_of
+  rules:
+    # ========================================================================
+    # RULE 1: Verify Rule Class Inheritance Architecture
+    # ========================================================================
+    # Why: All rule classes must inherit from one of the base classes to ensure
+    # they follow the architectural pattern and have required methods.
+    #
+    # Protection Level: PROGRESSIVE - Check new/modified rule files
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/**/*Rule.ts'
+        exclude_pattern: '**/index.ts'
+        status: ['added', 'modified']
+      assert:
+        type: any_of
+        rules:
+          - type: assert_match
+            pattern: 'extends (BaseRule|SelectorRule|AssertionRule|CombinatorRule)'
+            suggestion: 'All rule classes must extend from BaseRule, SelectorRule, AssertionRule, or CombinatorRule'
+            documentation: 'See src/core/Rule.ts for base rule classes'
+          - type: assert_match
+            pattern: 'abstract class.*Rule'
+
+    # ========================================================================
+    # RULE 2: Verify Builder Pattern Implementation
+    # ========================================================================
+    # Why: All rule builders must implement the RuleBuilder interface to work
+    # with the factory pattern.
+    #
+    # Protection Level: PROGRESSIVE - Check new/modified builders
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/config/builders/**/*Builder.ts'
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: 'implements RuleBuilder'
+        suggestion: 'Rule builders must implement the RuleBuilder interface to work with the factory pattern'
+        documentation: 'See src/types/index.ts for the RuleBuilder interface definition'
+
+    # ========================================================================
+    # RULE 3: Verify Factory Registration for New Builders
+    # ========================================================================
+    # Why: New rule types must be registered with the factory so they can be
+    # created from YAML.
+    #
+    # Protection Level: PROGRESSIVE - Check when config/index.ts is modified
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/config/index.ts'
+        status: ['modified']
+      assert:
+        type: assert_match
+        pattern: 'factory\.register\('
+        message: 'When modifying config/index.ts, ensure new builders are registered with factory.register()'
+
+    # ========================================================================
+    # RULE 4: Enforce Cross-Layer Architecture Boundaries
+    # ========================================================================
+    # Why: Domain layer must remain pure - no infrastructure dependencies.
+    # This is an architectural decision that tests/linters can't enforce.
+    #
+    # Protection Level: PROGRESSIVE - Check new/modified domain files
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/core/**/*.ts'
+        status: ['added', 'modified']
+      assert:
+        type: none_of
+        rules:
+          - type: assert_match
+            pattern: 'from\s+["'']\.\./(adapters|config|cli|reporters)'
+            message: 'Core layer cannot import from outer layers (adapters, config, cli, reporters)'
+
+    # ========================================================================
+    # RULE 5: Validate Documentation Example Patterns
+    # ========================================================================
+    # Why: Documentation should use real rule type names, not category names.
+    #
+    # Protection Level: PROGRESSIVE - Check new/modified docs
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*.{md,yaml}'
+        exclude_pattern: 'node_modules/**'
+        status: ['added', 'modified']
+      assert:
+        type: none_of
+        rules:
+          - type: assert_match
+            pattern: 'type:\s*(selector|assertion|combinator)\s*$'
+            message: 'Use specific rule types (e.g., select_files, assert_match) not category names'
+

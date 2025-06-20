@@ -23,7 +23,7 @@
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist",
     "prepare": "npm run build",
-    "check": "npm run build && ./dist/cli/index.js check -b main --exclude \"**/examples/**\" \"test-*.*\"",
+    "check": "npm run build && ./dist/cli/index.js check -c \".codeguardian/*.cg.yaml\" -b main --exclude \"**/examples/**\" \"test-*.*\"",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "prepublish:beta": "npm run clean && npm run build && npm test && npm run check",

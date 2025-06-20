@@ -1,0 +1,83 @@
+# ============================================================================
+# PROTECTIVE RULES - Absolute Protection Level
+# ============================================================================
+# These rules use select_all: true to enforce critical standards across the
+# entire codebase, regardless of what has changed. They protect against:
+# - Runtime errors that could crash the application
+# - Security vulnerabilities
+# - Project-wide standards that must always be maintained
+#
+# WHEN TO USE PROTECTIVE RULES:
+# - Safety/runtime issues (prevents crashes)
+# - Security patterns (no secrets, no vulnerable code)
+# - Project standards (package manager consistency)
+# - License/legal compliance
+# ============================================================================
+
+id: codeguardian-protective-rules
+description: Critical rules that must always pass for the entire codebase
+rule:
+  type: all_of
+  rules:
+    # ========================================================================
+    # RULE 1: No Yarn Lock File
+    # ========================================================================
+    # Why: This project uses npm exclusively. Having both package-lock.json
+    # and yarn.lock can cause dependency conflicts and confusion.
+    #
+    # Protection Level: ABSOLUTE - Always check entire repository
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'yarn.lock'
+        select_all: true  # Check entire repo, not just diff
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: false
+        message: 'yarn.lock file is not allowed. This project uses npm exclusively. Please remove yarn.lock and use package-lock.json instead.'
+
+    # ========================================================================
+    # RULE 2: Prevent Direct Assertion Evaluation (Runtime Safety)
+    # ========================================================================
+    # Why: This is a unique architectural constraint of Code Guardian.
+    # Assertions are designed to be used within combinators only.
+    # Direct evaluation will throw an error at runtime.
+    #
+    # Protection Level: ABSOLUTE - Prevents runtime crashes
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'src/**/*.ts'
+        exclude_pattern: '**/test*'
+        select_all: true  # This pattern causes runtime errors and should never exist
+      assert:
+        type: assert_match
+        pattern: '\.evaluate\(.*AssertionRule'
+        should_match: false
+        message: 'Direct assertion evaluation causes runtime errors. Use assertions within combinators.'
+
+    # ========================================================================
+    # RULE 3: Verify Package.json Required Scripts
+    # ========================================================================
+    # Why: Critical npm scripts must always be present and correct to ensure
+    # the project can be built, tested, and validated properly.
+    #
+    # Protection Level: ABSOLUTE - Core project functionality
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: 'package.json'
+        select_all: true  # Always verify package.json has required scripts
+      assert:
+        type: all_of
+        rules:
+          - type: assert_match
+            pattern: '"build":\s*"tsc"'
+            message: 'package.json must have build script: "build": "tsc"'
+          - type: assert_match
+            pattern: '"test":\s*"jest"'
+            message: 'package.json must have test script: "test": "jest"'
+          - type: assert_match
+            pattern: '"typecheck":\s*"tsc --noEmit"'
+            message: 'package.json must have typecheck script: "typecheck": "tsc --noEmit"'
