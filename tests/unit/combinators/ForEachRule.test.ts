@@ -1,8 +1,16 @@
 import { ForEachRule } from '../../../src/combinators/ForEachRule';
 import { SelectFilesRule } from '../../../src/selectors/SelectFilesRule';
 import { AssertMatchRule } from '../../../src/assertions/AssertMatchRule';
+import { SelectCommandOutputRule } from '../../../src/selectors/SelectCommandOutputRule';
+import { AssertPropertyRule } from '../../../src/assertions/AssertPropertyRule';
+import { AllOfRule } from '../../../src/combinators/AllOfRule';
+import { AssertCommandOutputRule } from '../../../src/assertions/AssertCommandOutputRule';
 import { EvaluationContext, Repository, DiffInfo, FileInfo } from '../../../src/types';
 import { ResultCache } from '../../../src/core';
+import { exec } from 'child_process';
+
+jest.mock('child_process');
+const mockedExec = exec as unknown as jest.Mock;
 
 describe('ForEachRule', () => {
     const createMockContext = (files: FileInfo[]): EvaluationContext => {
@@ -129,5 +137,134 @@ describe('ForEachRule', () => {
         expect(result.violations![0]?.message).toContain(
             'Error evaluating assertion: Assertion error'
         );
+    });
+
+    describe('ForEachRule with Command Execution and Value Extraction', () => {
+        const createMockContext = (): EvaluationContext => {
+            const mockRepository: Repository = {
+                getFiles: jest.fn().mockResolvedValue([]),
+                getFileContent: jest.fn().mockResolvedValue(''),
+                getDiff: jest.fn(),
+                getAllFiles: jest.fn(),
+            };
+
+            const mockDiff: DiffInfo = {
+                files: [],
+                baseBranch: 'main',
+                headBranch: 'feature',
+            };
+
+            return {
+                repository: mockRepository,
+                diff: mockDiff,
+                cache: new ResultCache(),
+                config: { type: 'for-each' },
+            };
+        };
+
+        beforeEach(() => {
+            mockedExec.mockClear();
+        });
+
+        const repomixOutputBelowLimit = `
+    🔎 Security Check:
+    ──────────────────
+    ✔ No suspicious files detected.
+
+    📊 Pack Summary:
+    ────────────────
+      Total Files: 78 files
+      Total Chars: 223,985 chars
+     Total Tokens: 49,513 tokens
+           Output: repomix-output.md
+         Security: ✔ No suspicious files detected
+
+    🎉 All Done!
+    Your repository has been successfully packed.
+    `;
+
+        const repomixOutputAboveLimit = repomixOutputBelowLimit.replace('49,513', '52,100');
+
+        it('should pass when command succeeds and extracted token count is below the limit', async () => {
+            const selector = new SelectCommandOutputRule('cmd-selector', 'npx repomix pack');
+            
+            const assertion = new AllOfRule('all-assertions', [
+                new AssertCommandOutputRule('check-exit-code', 'exitCode', undefined, '==', 0),
+                new AssertPropertyRule(
+                    'check-token-count',
+                    'stdout',
+                    50000,
+                    '<=',
+                    /Total Tokens:\s*([\d,]+)/
+                ),
+            ]);
+
+            const rule = new ForEachRule('for-each-command-test', selector, assertion);
+            
+            mockedExec.mockImplementation((_command, callback) => {
+                callback(null, repomixOutputBelowLimit, '');
+            });
+
+            const context = createMockContext();
+            const result = await rule.evaluate(context);
+
+            expect(result.passed).toBe(true);
+            expect(result.violations).toHaveLength(0);
+            expect(mockedExec).toHaveBeenCalledWith('npx repomix pack', expect.any(Function));
+        });
+
+        it('should fail when extracted token count is above the limit', async () => {
+            const selector = new SelectCommandOutputRule('cmd-selector', 'npx repomix pack');
+            const assertion = new AllOfRule('all-assertions', [
+                new AssertCommandOutputRule('check-exit-code', 'exitCode', undefined, '==', 0),
+                new AssertPropertyRule(
+                    'check-token-count',
+                    'stdout',
+                    50000,
+                    '<=',
+                    /Total Tokens:\s*([\d,]+)/
+                ),
+            ]);
+            const rule = new ForEachRule('for-each-command-test', selector, assertion);
+            
+            mockedExec.mockImplementation((_command, callback) => {
+                callback(null, repomixOutputAboveLimit, '');
+            });
+
+            const context = createMockContext();
+            const result = await rule.evaluate(context);
+
+            expect(result.passed).toBe(false);
+            expect(result.violations).toHaveLength(1);
+            expect(result.violations![0]?.message).toContain("Assertion 'check-token-count' failed");
+        });
+        
+        it('should fail when the command itself fails (non-zero exit code)', async () => {
+            const selector = new SelectCommandOutputRule('cmd-selector', 'npx repomix pack');
+            const assertion = new AllOfRule('all-assertions', [
+                new AssertCommandOutputRule('check-exit-code', 'exitCode', undefined, '==', 0),
+                new AssertPropertyRule(
+                    'check-token-count',
+                    'stdout',
+                    50000,
+                    '<=',
+                    /Total Tokens:\s*([\d,]+)/
+                ),
+            ]);
+            const rule = new ForEachRule('for-each-command-test', selector, assertion);
+            
+            const mockError = new Error('Command failed');
+            (mockError as any).code = 1; 
+            mockedExec.mockImplementation((_command, callback) => {
+                callback(mockError, '', 'Error running command');
+            });
+
+            const context = createMockContext();
+            const result = await rule.evaluate(context);
+
+            expect(result.passed).toBe(false);
+            expect(result.violations).toHaveLength(1);
+            expect(result.violations![0]?.message).toContain("Assertion 'check-exit-code' failed");
+        });
     });
 });

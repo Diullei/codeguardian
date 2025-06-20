@@ -135,4 +135,88 @@ describe('AssertPropertyRule', () => {
             );
         });
     });
+
+    describe('value extraction with extract_pattern', () => {
+        const context = createMockContext();
+        const mockItem = {
+            output: `
+        Some introductory text.
+        Total Tokens: 49,513 tokens
+        Some concluding text.
+        `,
+        };
+
+        it('should extract a numeric value and pass the comparison', async () => {
+            const rule = new AssertPropertyRule(
+                'test-rule',
+                'output',
+                50000,
+                '<=',
+                /Total Tokens:\s*([\d,]+)/
+            );
+            expect(await rule.assert(mockItem, context)).toBe(true);
+        });
+
+        it('should extract a numeric value and fail the comparison', async () => {
+            const rule = new AssertPropertyRule(
+                'test-rule',
+                'output',
+                40000,
+                '<=',
+                /Total Tokens:\s*([\d,]+)/
+            );
+            expect(await rule.assert(mockItem, context)).toBe(false);
+        });
+
+        it('should handle different operators with extracted values', async () => {
+            const rule = new AssertPropertyRule(
+                'test-rule',
+                'output',
+                49513,
+                '==',
+                /Total Tokens:\s*([\d,]+)/
+            );
+            expect(await rule.assert(mockItem, context)).toBe(true);
+        });
+
+        it('should fail if the extract_pattern does not match', async () => {
+            const rule = new AssertPropertyRule(
+                'test-rule',
+                'output',
+                50000,
+                '<=',
+                /Total Files:\s*(\d+)/
+            );
+            expect(await rule.assert(mockItem, context)).toBe(false);
+        });
+        
+        it('should fail if the extract_pattern matches but has no capture group', async () => {
+            const rule = new AssertPropertyRule(
+                'test-rule',
+                'output',
+                50000,
+                '<=',
+                /Total Tokens:\s*[\d,]+/
+            );
+            expect(await rule.assert(mockItem, context)).toBe(false);
+        });
+
+        it('should work on a direct string item, not just object properties', async () => {
+            const item = { value: 'Version: 12' };
+            const stringRule = new AssertPropertyRule('test-rule', 'value', 10, '>=', /Version:\s*(\d+)/);
+            expect(await stringRule.assert(item, context)).toBe(true);
+        });
+
+        it('should correctly extract a string value for string-based comparisons', async () => {
+            const item = { log: 'Status: SUCCESS' };
+            const rule = new AssertPropertyRule(
+                'test-rule',
+                'log',
+                'SUCCESS',
+                '==',
+                /Status:\s*(\w+)/
+            );
+            expect(await rule.assert(item, context)).toBe(true);
+        });
+    });
 });
