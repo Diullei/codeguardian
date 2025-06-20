@@ -120,6 +120,7 @@ Selectors find and return items to validate:
 - **select_lines** - Select lines matching a pattern within file content
 - **select_ast_nodes** - Select AST nodes using ast-grep queries
 - **select_file_changes** - Select files based on percentage of lines changed
+- **select_command_output** - Execute shell commands and capture their output (stdout, stderr, exit code)
 
 ### Assertions
 
@@ -127,7 +128,8 @@ Assertions check properties of selected items:
 
 - **assert_match** - Check if text matches a pattern
 - **assert_count** - Check the count of items
-- **assert_property** - Check object properties
+- **assert_property** - Check object properties (supports regex extraction from strings)
+- **assert_command_output** - Validate command execution results (exit code, stdout, stderr)
 
 ### Combinators
 
@@ -412,6 +414,48 @@ rule:
 ```
 
 This example uses `select_all: true` to validate that certain features exist in the codebase regardless of what files have changed. This is useful for enforcing architectural requirements or ensuring critical configurations are in place.
+
+### Validate Build Output and Metrics
+
+Code Guardian can execute shell commands and validate their output, making it perfect for checking build results, test coverage, or other metrics:
+
+```yaml
+id: validate-build-metrics
+description: Ensure build succeeds and bundle size is within limits
+rule:
+    type: all_of
+    rules:
+        # Check that build succeeds
+        - type: for_each
+          select:
+              type: select_command_output
+              command: 'npm run build'
+          assert:
+              type: assert_command_output
+              target: 'exitCode'
+              condition: '=='
+              value: 0
+              suggestion: 'Build failed - check build logs for errors'
+        
+        # Extract and validate bundle size from build output
+        - type: for_each
+          select:
+              type: select_command_output
+              command: 'npm run build:stats'
+          assert:
+              type: assert_property
+              property_path: 'stdout'
+              # Extract numeric value from output like "Bundle size: 1,245 KB"
+              extract_pattern: 'Bundle size:\s*([\d,]+)\s*KB'
+              operator: '<='
+              expected_value: 2000
+              suggestion: 'Bundle size exceeds 2MB limit'
+```
+
+This example shows how to:
+- Run build commands and check their exit codes
+- Extract numeric values from command output using regex patterns
+- Validate that metrics stay within acceptable thresholds
 
 ## CLI Usage
 

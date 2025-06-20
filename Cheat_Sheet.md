@@ -493,17 +493,20 @@ value: 0 # Required. The number to compare against.
 
 #### `assert_property`
 
-Checks a property of a selected item (often an AST node).
+Checks a property of a selected item (often an AST node or command output). Can also extract a value from a string using a regex pattern before comparison.
 
 ```yaml
 type: assert_property
-property_path: 'text' # Required. Path to the property (e.g., 'user.name').
-expected_value: 'try' # Required. The value to compare against.
-operator: 'includes' # Optional. Defaults to '=='. See operators below.
+property_path: 'stdout' # Required. Path to the property (e.g., 'user.name', 'stdout').
+expected_value: 50000 # Required. The value to compare against.
+operator: '<=' # Optional. Defaults to '=='. See operators below.
+extract_pattern: 'Total Tokens: ([\d,]+)' # Optional. Regex with a capture group to extract a value from a string.
 ```
 
+- **`extract_pattern`**: If provided, this regex is run against the string found at `property_path`. The value from the **first capture group** `(...)` is used for the comparison. This is extremely powerful for validating metrics from unstructured command-line output.
+
 - **`operator` options**:
-    - `==`, `!=`, `>`, `<`, `>=`, `<=` (standard comparisons)
+    - `==`, `!=`, `>`, `<`, `>=`, `<=` (standard comparisons, will cast to Number for numeric checks)
     - `includes` (for strings and arrays)
     - `matches` (for checking a string against a regex `expected_value`)
 
@@ -920,7 +923,128 @@ rule:
 
 ---
 
-### 8. Running Your Rules
+### 8. Command Execution Rules
+
+These rules allow you to run shell commands and validate their output, which is useful for checking build scripts, test runners, or other CLI tools.
+
+#### `select_command_output` (Selector)
+
+Executes a shell command and provides its result as a single item for validation.
+
+```yaml
+type: select_command_output
+command: 'npm run build' # Required. The command to execute.
+```
+
+#### `assert_command_output` (Assertion)
+
+Checks the result of a command executed by `select_command_output`.
+
+```yaml
+type: assert_command_output
+target: 'exitCode' # Required. What to check: 'exitCode', 'stdout', or 'stderr'.
+# --- For target: 'exitCode' ---
+condition: '=='    # Required. Comparison operator.
+value: 0           # Required. The number to compare against.
+
+# --- For target: 'stdout' or 'stderr' ---
+pattern: 'Build successful' # Required. Regex pattern to match.
+should_match: true        # Optional. Defaults to true.
+first_lines: 10           # Optional. Check only the first N lines.
+last_lines: 10            # Optional. Check only the last N lines.
+```
+- **Note:** `first_lines` and `last_lines` cannot be used together.
+
+#### Pattern: Checking a Build Script
+
+_Ensure the `npm run build` command completes successfully and outputs "Build successful"._
+
+```yaml
+id: validate-build-script
+rule:
+  type: for_each
+  select:
+    type: select_command_output
+    command: 'npm run build'
+  assert:
+    type: all_of
+    rules:
+      - type: assert_command_output
+        target: 'exitCode'
+        condition: '=='
+        value: 0
+        suggestion: 'The build script failed. Check the build logs for errors.'
+
+      - type: assert_command_output
+        target: 'stdout'
+        pattern: 'Build successful|Finished'
+        last_lines: 5 # Check for success message in the last 5 lines of output
+        suggestion: 'Build completed but success message was not found in output.'
+```
+
+#### Pattern: Checking for Test Failures
+
+_Run a test command and ensure it fails (non-zero exit code) and that `stderr` contains a specific error._
+
+```yaml
+id: validate-expected-test-failure
+rule:
+  type: for_each
+  select:
+    type: select_command_output
+    command: 'npm test -- myFailingTest.test.ts'
+  assert:
+    type: all_of
+    rules:
+      - type: assert_command_output
+        target: 'exitCode'
+        condition: '!='
+        value: 0
+
+      - type: assert_command_output
+        target: 'stderr'
+        pattern: 'Expected to receive'
+```
+
+#### Pattern: Extracting and Validating a Metric from Command Output
+
+_Run a command and validate that the "Total Tokens" reported in its `stdout` is less than or equal to 50,000._
+
+This example directly solves the use case of extracting a numeric value from command output using `assert_property` with `extract_pattern`.
+
+```yaml
+id: validate-token-limit
+description: Ensure the packed output does not exceed the token limit.
+rule:
+  type: for_each
+  select:
+    # First, run the command to get the output
+    type: select_command_output
+    command: 'npx repomix pack' # Your example command
+  assert:
+    # Now, assert against the 'stdout' property of the command's result
+    type: assert_property
+    property_path: 'stdout' # Target the standard output string
+    
+    # This regex finds the line and captures the number (including commas)
+    extract_pattern: 'Total Tokens:\s*([\d,]+)'
+    
+    # Perform a numerical comparison on the extracted value
+    operator: '<='
+    expected_value: 50000
+    suggestion: 'The total token count has exceeded the 50,000 limit.'
+```
+
+**Explanation of the `extract_pattern`:**
+- `Total Tokens:`: Matches the literal text.
+- `\s*`: Matches zero or more whitespace characters.
+- `([\d,]+)`: This is the **capture group**.
+    - `[\d,]+` matches one or more characters that are either a digit (`\d`) or a comma (`,`).
+    - The parentheses `(...)` capture this part, which is what `AssertPropertyRule` will use as the value for comparison. The rule automatically handles stripping the commas before the numeric comparison.
+
+---
+
+### 9. Running Your Rules
 
 ```bash
 # Auto-discover *.cg.yaml / *.codeguardian.yaml files and check against main branch
