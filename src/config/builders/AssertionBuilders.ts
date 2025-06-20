@@ -1,5 +1,5 @@
 import { RuleBuilder, RuleFactory, CountCondition, ComparisonOperator } from '../../types';
-import { AssertMatchRule, AssertCountRule, AssertPropertyRule } from '../../assertions';
+import { AssertMatchRule, AssertCountRule, AssertPropertyRule, AssertCommandOutputRule } from '../../assertions';
 
 export class AssertMatchBuilder implements RuleBuilder {
     build(config: any, _factory: RuleFactory) {
@@ -30,11 +30,33 @@ export class AssertCountBuilder implements RuleBuilder {
 
 export class AssertPropertyBuilder implements RuleBuilder {
     build(config: any, _factory: RuleFactory) {
+        const extractPattern = config.extract_pattern 
+            ? new RegExp(config.extract_pattern, config.extract_flags || '') 
+            : undefined;
+
         return new AssertPropertyRule(
             config.id || 'assert_property',
             config.property_path,
             config.expected_value,
-            (config.operator as ComparisonOperator) || '=='
+            (config.operator as ComparisonOperator) || '==',
+            extractPattern
+        );
+    }
+}
+
+export class AssertCommandOutputBuilder implements RuleBuilder {
+    build(config: any, _factory: RuleFactory) {
+        const pattern = config.pattern ? new RegExp(config.pattern, config.flags || '') : undefined;
+        
+        return new AssertCommandOutputRule(
+            config.id || `assert_command_output_${config.target}`,
+            config.target,
+            pattern,
+            config.condition as CountCondition,
+            config.value,
+            config.first_lines,
+            config.last_lines,
+            config.should_match !== false
         );
     }
 }

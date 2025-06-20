@@ -4,9 +4,11 @@ import {
     SelectLinesBuilder,
     SelectASTNodesBuilder,
     SelectFileChangesBuilder,
+    SelectCommandOutputBuilder,
     AssertMatchBuilder,
     AssertCountBuilder,
     AssertPropertyBuilder,
+    AssertCommandOutputBuilder,
     AllOfBuilder,
     AnyOfBuilder,
     NoneOfBuilder,
@@ -21,11 +23,13 @@ export function createRuleFactory(): RuleFactory {
     factory.register('select_lines', new SelectLinesBuilder());
     factory.register('select_ast_nodes', new SelectASTNodesBuilder());
     factory.register('select_file_changes', new SelectFileChangesBuilder());
+    factory.register('select_command_output', new SelectCommandOutputBuilder());
 
     // Register assertion builders
     factory.register('assert_match', new AssertMatchBuilder());
     factory.register('assert_count', new AssertCountBuilder());
     factory.register('assert_property', new AssertPropertyBuilder());
+    factory.register('assert_command_output', new AssertCommandOutputBuilder());
 
     // Register combinator builders
     factory.register('all_of', new AllOfBuilder());

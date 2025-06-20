@@ -1,5 +1,5 @@
 import { RuleBuilder, RuleFactory, FileStatus } from '../../types';
-import { SelectFilesRule, SelectLinesRule, SelectASTNodesRule, SelectFileChangesRule } from '../../selectors';
+import { SelectFilesRule, SelectLinesRule, SelectASTNodesRule, SelectFileChangesRule, SelectCommandOutputRule } from '../../selectors';
 
 export class SelectFilesBuilder implements RuleBuilder {
     build(config: any, _factory: RuleFactory) {
@@ -45,6 +45,15 @@ export class SelectFileChangesBuilder implements RuleBuilder {
             config.id || 'select_file_changes',
             config.min_percentage,
             config.max_percentage
+        );
+    }
+}
+
+export class SelectCommandOutputBuilder implements RuleBuilder {
+    build(config: any, _factory: RuleFactory) {
+        return new SelectCommandOutputRule(
+            config.id || `select_command_${config.command?.substring(0, 20)}`,
+            config.command
         );
     }
 }

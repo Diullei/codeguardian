@@ -60,6 +60,13 @@ export interface ASTNode {
     [key: string]: any;
 }
 
+export interface CommandOutput {
+    command: string;
+    exitCode: number;
+    stdout: string;
+    stderr: string;
+}
+
 export interface DiffInfo {
     files: FileInfo[];
     baseBranch: string;
