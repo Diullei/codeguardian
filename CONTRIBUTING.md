@@ -53,7 +53,7 @@ codeguardian check
 To unlink when done:
 
 ```bash
-npm unlink -g codeguardian
+npm unlink -g @diullei/codeguardian
 ```
 
 #### Method 2: Direct execution

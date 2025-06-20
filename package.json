@@ -1,5 +1,5 @@
 {
-  "name": "codeguardian",
+  "name": "@diullei/codeguardian",
   "version": "0.1.0-beta.1",
   "description": "Open-source developer tool to validate and enforce architectural rules, especially for AI-generated code",
   "main": "dist/index.js",
@@ -27,8 +27,8 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\"",
     "prepublish:beta": "npm run clean && npm run build && npm test && npm run check",
-    "publish:beta": "npm run prepublish:beta && npm publish --tag beta",
-    "publish:dry": "npm run prepublish:beta && npm publish --dry-run"
+    "publish:beta": "npm run prepublish:beta && npm publish --tag beta --access=public",
+    "publish:dry": "npm run prepublish:beta && npm publish --dry-run --access=public"
   },
   "keywords": [
     "code-validation",

@@ -21,13 +21,13 @@ Code Guardian analyzes only what changed (by default), making it fast and focuse
 Code Guardian is currently in beta. Install it globally:
 
 ```bash
-npm install -g codeguardian@beta
+npm install -g @diullei/codeguardian@beta
 ```
 
 Or add it as a development dependency to your project:
 
 ```bash
-npm install --save-dev codeguardian@beta
+npm install --save-dev @diullei/codeguardian@beta
 ```
 
 ### Running Without Installation
@@ -35,7 +35,7 @@ npm install --save-dev codeguardian@beta
 You can also run Code Guardian directly using `npx`:
 
 ```bash
-npx codeguardian@beta check
+npx @diullei/codeguardian@beta check
 ```
 
 ### Contributing
