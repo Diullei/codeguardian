@@ -18,27 +18,29 @@ Code Guardian analyzes only what changed (by default), making it fast and focuse
 
 ## Installation
 
-> **Note**: Code Guardian is not yet published to npm. To use it now, you need to clone the repository, build it, and use npm link:
-> 
-> ```bash
-> git clone https://github.com/diullei/codeguardian.git
-> cd codeguardian
-> npm install
-> npm run build
-> npm link
-> ```
-
-Once published, you will be able to install it via:
+Install Code Guardian globally:
 
 ```bash
 npm install -g codeguardian
 ```
 
-Or use locally in a project:
+Or add it as a development dependency to your project:
 
 ```bash
 npm install --save-dev codeguardian
 ```
+
+### Running Without Installation
+
+You can also run Code Guardian directly using `npx`:
+
+```bash
+npx codeguardian check
+```
+
+### Contributing
+
+Want to contribute or run Code Guardian from source? See our [Contributing Guide](CONTRIBUTING.md) for development setup instructions.
 
 ## Quick Start
 
