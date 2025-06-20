@@ -6,13 +6,26 @@ export class AssertPropertyRule extends AssertionRule {
         id: string,
         private propertyPath: string,
         private expectedValue: any,
-        private operator: ComparisonOperator = '=='
+        private operator: ComparisonOperator = '==',
+        private extractPattern?: RegExp
     ) {
         super(id);
     }
 
     async assert(item: any, _context: EvaluationContext): Promise<boolean> {
-        const actualValue = this.getNestedProperty(item, this.propertyPath);
+        let actualValue = this.getNestedProperty(item, this.propertyPath);
+
+        if (this.extractPattern && typeof actualValue === 'string') {
+            const match = this.extractPattern.exec(actualValue);
+            
+            if (match && match[1] !== undefined) {
+                const extracted = match[1].replace(/,/g, '');
+                actualValue = extracted;
+            } else {
+                return false;
+            }
+        }
+
         return this.compare(actualValue, this.expectedValue, this.operator);
     }
 
