@@ -420,8 +420,22 @@ Checks if an item's text content matches a regular expression.
 type: assert_match
 pattern: 'dangerouslySetInnerHTML' # Required. Regular expression.
 should_match: false                # Optional. `false` to fail on match. Defaults to `true`.
-suggestion: 'Avoid using dangerouslySetInnerHTML. Use React's children prop instead.' # Optional.
-documentation: 'https://reactjs.org/docs/dom-elements.html#dangerouslysetinnerhtml' # Optional.
+suggestion: 'Avoid using dangerouslySetInnerHTML. Use React's children prop instead.' # Optional. Displayed when rule fails.
+documentation: 'https://reactjs.org/docs/dom-elements.html#dangerouslysetinnerhtml' # Optional. URL for more info.
+```
+
+**Important Notes:**
+- The `suggestion` field provides actionable guidance when a rule fails
+- It appears in the console output as "Suggestion: [your message]"
+- Keep suggestions concise and actionable (e.g., "Move to src/utils/" not "This file is in the wrong place")
+- The `documentation` field can provide a URL for detailed explanations
+
+**Example Output with Suggestion:**
+```
+> test.sh
+[CHECK FAIL] Expected file content NOT to match pattern '.*' but it did
+
+  Suggestion: Move shell scripts to scripts/ or bin/ directory
 ```
 
 ##### ⚠️ Important: Regex Pattern Escaping in YAML
