@@ -7,6 +7,7 @@ export interface ValidationReport {
         passedRules: number;
         failedRules: number;
         violations: number;
+        totalIndividualRules?: number;
     };
     results: RuleValidationResult[];
     diff: DiffInfo;

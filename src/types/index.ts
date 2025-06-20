@@ -28,6 +28,11 @@ export interface RuleResult {
     message?: string;
     details?: any;
     violations?: Violation[];
+    subResults?: Array<{
+        ruleId: string;
+        passed: boolean;
+        violations?: Violation[];
+    }>;
 }
 
 export interface FileInfo {

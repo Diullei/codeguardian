@@ -21,7 +21,9 @@ export class ConsoleReporter implements ValidationReporter {
         console.log(this.color('validation session starts', 'cyan', 'bright'));
         console.log(`platform ${process.platform} -- Node ${process.version}, codeguardian-1.0.0`);
         console.log(`rootdir: ${process.cwd()}`);
-        console.log(`collected ${report.summary.totalFiles} files, ${report.summary.passedRules + report.summary.failedRules} rules`);
+        const individualRules = report.summary.totalIndividualRules || 0;
+        const configFiles = report.results.length;
+        console.log(`collected ${report.summary.totalFiles} files, ${individualRules} ${individualRules === 1 ? 'rule' : 'rules'} (${configFiles} config ${configFiles === 1 ? 'file' : 'files'})`);
         console.log('');
 
         // Violations (keep existing detailed format)
@@ -48,8 +50,8 @@ export class ConsoleReporter implements ValidationReporter {
         const duration = report.duration / 1000; // Convert to seconds
 
         if (report.passed) {
-            // Success format: "==== 5 passed in 0.12s ===="
-            const passedText = `${summary.passedRules} passed`;
+            // Success format: "==== 12 rules passed in 0.12s ===="
+            const passedText = `${summary.passedRules} ${summary.passedRules === 1 ? 'rule' : 'rules'} passed`;
             console.log(
                 this.color(
                     `${'='.repeat(4)} ${passedText} in ${duration.toFixed(2)}s ${'='.repeat(80 - passedText.length - 13)}`,
@@ -58,13 +60,13 @@ export class ConsoleReporter implements ValidationReporter {
                 )
             );
         } else {
-            // Failure format: "==== 1 failed, 3 passed in 0.45s ===="
+            // Failure format: "==== 1 rule failed, 11 rules passed in 0.45s ===="
             const parts = [];
             if (summary.failedRules > 0) {
-                parts.push(this.color(`${summary.failedRules} failed`, 'red', 'bright'));
+                parts.push(this.color(`${summary.failedRules} ${summary.failedRules === 1 ? 'rule' : 'rules'} failed`, 'red', 'bright'));
             }
             if (summary.passedRules > 0) {
-                parts.push(this.color(`${summary.passedRules} passed`, 'green'));
+                parts.push(this.color(`${summary.passedRules} ${summary.passedRules === 1 ? 'rule' : 'rules'} passed`, 'green'));
             }
 
             const statusText = parts.join(', ');
@@ -77,6 +79,14 @@ export class ConsoleReporter implements ValidationReporter {
             console.log(`${'='.repeat(4)} ${fullText} ${'='.repeat(padding)}`);
         }
 
+        // Show file and violation counts
+        console.log('');
+        const fileInfo = `Validated ${summary.totalFiles} ${summary.totalFiles === 1 ? 'file' : 'files'}`;
+        const violationInfo = summary.violations > 0 
+            ? `, found ${summary.violations} ${summary.violations === 1 ? 'violation' : 'violations'}`
+            : '';
+        console.log(this.color(`${fileInfo}${violationInfo}`, 'dim'));
+
         // Additional pytest-style info
         if (!report.passed) {
             console.log(
@@ -86,8 +96,7 @@ export class ConsoleReporter implements ValidationReporter {
     }
 
     private printRuleViolations(result: any): void {
-        const ruleName = `rule: ${result.ruleId}`;
-        console.log(this.color(ruleName, 'red', 'bright'));
+        console.log(this.color(result.ruleId, 'red', 'bright'));
 
         // Show configuration file path
         if (result.configFile) {

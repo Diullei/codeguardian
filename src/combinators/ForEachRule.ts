@@ -11,6 +11,13 @@ export class ForEachRule extends CombinatorRule {
         this.assertion = assertion;
     }
 
+    /**
+     * ForEach counts as 1 rule (the selector-assertion pair)
+     */
+    countRules(): number {
+        return 1;
+    }
+
     async evaluate(context: EvaluationContext): Promise<RuleResult> {
         const selectorResult = await this.selector.evaluate(context);
         const items = selectorResult.details?.items || [];

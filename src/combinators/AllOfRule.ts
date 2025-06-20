@@ -8,6 +8,7 @@ export class AllOfRule extends CombinatorRule {
 
     async evaluate(context: EvaluationContext): Promise<RuleResult> {
         const violations: Violation[] = [];
+        const subResults: RuleResult['subResults'] = [];
 
         for (const rule of this.rules) {
             let passed: boolean;
@@ -43,7 +44,19 @@ export class AllOfRule extends CombinatorRule {
                 const result = await rule.evaluate(context);
                 passed = result.passed;
                 ruleViolations = result.violations || [];
+                
+                // Collect sub-results from nested combinators
+                if (result.subResults) {
+                    subResults.push(...result.subResults);
+                }
             }
+
+            // Track this rule's result
+            subResults.push({
+                ruleId: rule.id,
+                passed,
+                violations: ruleViolations,
+            });
 
             if (!passed) {
                 violations.push(...ruleViolations);
@@ -51,10 +64,11 @@ export class AllOfRule extends CombinatorRule {
                     passed: false,
                     message: `Rule '${rule.id}' failed`,
                     violations,
+                    subResults,
                 };
             }
         }
 
-        return { passed: true };
+        return { passed: true, subResults };
     }
 }

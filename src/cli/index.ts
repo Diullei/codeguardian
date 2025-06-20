@@ -224,10 +224,13 @@ async function runValidation(args: ValidateArgs) {
 
     // Process each configuration file
     const allResults: ValidationReport['results'] = [];
-    let totalPassed = 0;
-    let totalFailed = 0;
+    let totalConfigsPassed = 0;
+    let totalConfigsFailed = 0;
     let totalViolations = 0;
     let totalFiles = 0;
+    let totalIndividualRules = 0;
+    let individualRulesPassed = 0;
+    let individualRulesFailed = 0;
 
     for (const loadedConfig of configurations) {
         const configData = loadedConfig.content;
@@ -236,13 +239,38 @@ async function runValidation(args: ValidateArgs) {
         const yamlContent = await fs.readFile(loadedConfig.path, 'utf-8');
         const rule = factory.loadFromYAML(yamlContent);
 
+        // Count individual rules if the rule has countRules method
+        if ('countRules' in rule && typeof rule.countRules === 'function') {
+            totalIndividualRules += rule.countRules();
+        } else {
+            totalIndividualRules += 1;
+        }
+
         // Evaluate rule
         const result = await rule.evaluate(context);
 
-        if (result.passed) {
-            totalPassed++;
+        // Count individual rule results
+        if (result.subResults) {
+            for (const subResult of result.subResults) {
+                if (subResult.passed) {
+                    individualRulesPassed++;
+                } else {
+                    individualRulesFailed++;
+                }
+            }
         } else {
-            totalFailed++;
+            // If no subResults, count the main result as 1 rule
+            if (result.passed) {
+                individualRulesPassed++;
+            } else {
+                individualRulesFailed++;
+            }
+        }
+
+        if (result.passed) {
+            totalConfigsPassed++;
+        } else {
+            totalConfigsFailed++;
         }
 
         totalViolations += result.violations?.length || 0;
@@ -278,15 +306,16 @@ async function runValidation(args: ValidateArgs) {
     }
 
     const duration = Date.now() - startTime;
-    const overallPassed = totalFailed === 0;
+    const overallPassed = totalConfigsFailed === 0;
 
     const report: ValidationReport = {
         passed: overallPassed,
         summary: {
             totalFiles,
-            passedRules: totalPassed,
-            failedRules: totalFailed,
+            passedRules: individualRulesPassed,
+            failedRules: individualRulesFailed,
             violations: totalViolations,
+            totalIndividualRules: totalIndividualRules,
         },
         results: allResults,
         diff,
