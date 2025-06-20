@@ -1,0 +1,53 @@
+# Source files
+src/
+tests/
+
+# Configuration files
+tsconfig.json
+jest.config.js
+.gitignore
+CLAUDE.md
+.eslintrc*
+.prettierrc*
+
+# Development files
+*.log
+*.tmp
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build artifacts (not needed since we only want dist/)
+*.tsbuildinfo
+
+# Generated files
+repomix-output.*
+
+# Git files
+.git/
+.github/
+
+# Node modules (automatically excluded by npm)
+node_modules/
+
+# Local environment files
+.env
+.env.local
+.env.*.local
+
+# Coverage reports
+coverage/
+.nyc_output/
+
+# Example files can be included for users
+# examples/
+
+# Keep these files for npm package
+!dist/
+!package.json
+!package-lock.json
+!README.md
+!LICENSE
+!Cheat_Sheet.md
