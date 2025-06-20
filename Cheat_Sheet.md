@@ -2,6 +2,30 @@
 
 This document is a quick reference for creating validation rules using Code Guardian's YAML-based configuration.
 
+## Protection Levels
+
+Code Guardian supports two protection levels, each serving different validation needs:
+
+### 🛡️ Protective Rules (Absolute Protection)
+Use `select_all: true` to enforce critical standards across the **entire codebase**:
+- **When to use**: Runtime safety, security patterns, project standards, compliance
+- **Behavior**: Checks all files regardless of Git changes
+- **Example use cases**: No yarn.lock, no eval(), no secrets, required licenses
+
+### 📈 Development Rules (Progressive Protection)  
+Use diff-based checking (default) for incremental improvements:
+- **When to use**: Code patterns, architecture rules, style conventions
+- **Behavior**: Checks only files in Git diff (added/modified/deleted)
+- **Example use cases**: Naming conventions, import restrictions, code patterns
+
+### Best Practice
+Organize rules into separate files by protection level:
+```
+.codeguardian/
+  protective-rules.yaml   # Absolute requirements
+  development-rules.yaml  # Progressive improvements
+```
+
 ## ⚠️ Important: Task Implementation Validation
 
 When creating temporary validation rules to verify that a task has been implemented correctly (e.g., checking if a new feature was added), **you must use `select_all: true`** in your file selectors. This ensures the validation checks all files in the repository, not just modified files in the current diff.

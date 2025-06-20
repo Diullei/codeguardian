@@ -502,6 +502,67 @@ select_all: false # If true, selects from all files in repo (not just diff)
 
 The file selector operates on files from the Git diff between base and head branches by default. It uses minimatch for glob pattern matching. When `select_all` is set to `true`, it will select from all files in the repository, which is useful for validating that certain features or patterns exist in the codebase regardless of recent changes.
 
+## Rule Protection Levels
+
+Code Guardian supports two protection levels for rules, each serving different purposes:
+
+### Protective Rules (Absolute Protection)
+
+Use `select_all: true` for rules that must **always** pass across the entire codebase:
+
+- **Runtime Safety**: Patterns that would crash your application
+- **Security**: No secrets, no vulnerable code patterns  
+- **Project Standards**: Package manager consistency (no yarn.lock if using npm)
+- **Legal/Compliance**: License headers, regulatory requirements
+
+```yaml
+# Example: Prevent runtime errors
+type: for_each
+select:
+  type: select_files
+  path_pattern: '**/*.ts'
+  select_all: true  # Always check entire codebase
+assert:
+  type: assert_match
+  pattern: 'eval\(|Function\('
+  should_match: false
+  message: 'Dynamic code execution is forbidden'
+```
+
+### Development Rules (Progressive Protection)
+
+Use diff-based checking (default) for rules that improve code quality incrementally:
+
+- **Code Patterns**: Enforce conventions on new/modified code
+- **Architecture**: Maintain boundaries in changes
+- **Style**: Apply standards progressively
+- **Refactoring**: Improve quality over time
+
+```yaml
+# Example: Enforce naming on new files
+type: for_each
+select:
+  type: select_files
+  path_pattern: 'src/**/*.ts'
+  status: ['added']  # Only new files
+assert:
+  type: assert_match
+  pattern: '^[A-Z][a-zA-Z]+\.ts$'
+  message: 'New TypeScript files must use PascalCase'
+```
+
+### Best Practice: Separate Rule Files
+
+Organize your rules by protection level:
+
+```
+.codeguardian/
+  protective-rules.yaml   # select_all: true - critical checks
+  development-rules.yaml  # diff-based - progressive improvements
+```
+
+This separation makes it clear which rules are absolute requirements versus progressive improvements.
+
 ### Line Selector
 
 ```yaml
