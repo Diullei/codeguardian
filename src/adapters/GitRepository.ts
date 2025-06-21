@@ -10,6 +10,37 @@ export class GitRepository implements Repository {
         this.git = simpleGit(repoPath);
     }
 
+    async getDefaultBranch(): Promise<string> {
+        try {
+            // Try to get the default branch from git config
+            const remoteHead = await this.git.raw(['symbolic-ref', 'refs/remotes/origin/HEAD']);
+            if (remoteHead) {
+                // Extract branch name from refs/remotes/origin/main format
+                const match = remoteHead.match(/refs\/remotes\/origin\/(.+)/);
+                if (match && match[1]) {
+                    return match[1].trim();
+                }
+            }
+        } catch {
+            // If symbolic-ref fails, continue to fallback logic
+        }
+
+        // Check if 'main' branch exists
+        try {
+            await this.git.raw(['rev-parse', '--verify', 'refs/heads/main']);
+            return 'main';
+        } catch {
+            // 'main' doesn't exist, try 'master'
+            try {
+                await this.git.raw(['rev-parse', '--verify', 'refs/heads/master']);
+                return 'master';
+            } catch {
+                // Neither exists, default to 'main'
+                return 'main';
+            }
+        }
+    }
+
     async getFiles(diff: DiffInfo, mode: Mode = 'diff'): Promise<FileInfo[]> {
         switch (mode) {
             case 'diff':

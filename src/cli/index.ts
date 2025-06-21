@@ -208,7 +208,15 @@ async function runValidation(args: ValidateArgs) {
 
     // Initialize repository
     const repository = new GitRepository(path.resolve(args.repo));
-    const diff = await repository.getDiff(args.base, args.head || 'HEAD');
+    
+    // Use the actual base branch, falling back to default if needed
+    let baseBranch = args.base;
+    if (args.base === 'main') {
+        // If user didn't override the default, check what the actual default branch is
+        baseBranch = await repository.getDefaultBranch();
+    }
+    
+    const diff = await repository.getDiff(baseBranch, args.head || 'HEAD');
 
     // Create evaluation context
     const context: EvaluationContext = {
