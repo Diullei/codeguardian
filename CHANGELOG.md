@@ -2,6 +2,22 @@
 
 All notable changes to Code Guardian will be documented in this file.
 
+## [0.1.0-beta.4] - 2025-01-21
+
+### Added
+- **Automatic Branch Fallback**: Code Guardian now automatically detects the default branch
+  - Checks remote HEAD configuration first
+  - Falls back to 'main' if it exists locally
+  - Falls back to 'master' if 'main' doesn't exist
+  - Ensures compatibility with repositories using 'master' as default branch
+
+### Changed
+- The CLI no longer assumes 'main' is the default branch
+- Added `getDefaultBranch()` method to GitRepository for intelligent branch detection
+
+### Fixed
+- Fixed issue where repositories using 'master' as default branch would fail validation
+
 ## [0.1.0-beta.3] - 2025-01-20
 
 ### Added
