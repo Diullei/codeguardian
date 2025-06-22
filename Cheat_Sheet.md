@@ -1042,6 +1042,59 @@ rule:
     - `[\d,]+` matches one or more characters that are either a digit (`\d`) or a comma (`,`).
     - The parentheses `(...)` capture this part, which is what `AssertPropertyRule` will use as the value for comparison. The rule automatically handles stripping the commas before the numeric comparison.
 
+#### Pattern: Validating Import Locations
+
+_Ensure that files importing specific packages are only located in allowed directories._
+
+This example shows how to restrict where certain imports can be used based on file paths:
+
+```yaml
+id: restrict-openai-imports
+description: Only infrastructure layer can import openai-go package
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: '**/*.go'
+  assert:
+    type: any_of  # Pass if either condition is true
+    rules:
+      # Option 1: File doesn't import openai-go at all
+      - type: assert_match
+        pattern: 'github\.com/sashabaranov/go-openai'
+        should_match: false
+      
+      # Option 2: File imports openai-go AND is in allowed location
+      - type: all_of
+        rules:
+          - type: assert_match
+            pattern: 'github\.com/sashabaranov/go-openai'
+            should_match: true
+          - type: assert_property
+            property_path: 'path'  # The file's path
+            expected_value: 'pkg/infrastructure'
+            operator: 'includes'
+            message: 'OpenAI imports are only allowed in pkg/infrastructure/'
+```
+
+**Alternative approach using nested for_each:**
+
+```yaml
+id: restrict-openai-imports-v2
+description: Files importing openai-go must be in infrastructure layer
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: '**/*.go'
+    exclude_pattern: 'pkg/infrastructure/**/*.go'  # Exclude allowed locations
+  assert:
+    type: assert_match
+    pattern: 'github\.com/sashabaranov/go-openai'
+    should_match: false
+    message: 'OpenAI imports are only allowed in pkg/infrastructure/'
+```
+
 ---
 
 ### 9. Running Your Rules
