@@ -23,26 +23,6 @@ This document is a quick reference for creating validation rules using Code Guar
 | all | `codeguardian check --mode=all` | Everything including untracked | Catch violations early |
 | staged | `codeguardian check --mode=staged` | Staged files only | Pre-commit hooks |
 
-### Common Confusion: Mode + select_all
-
-```yaml
-# Example 1: Development rule (respects mode)
-type: for_each
-select:
-  type: select_files
-  path_pattern: '**/*.test.js'
-  # No select_all, so:
-  # - With --mode=diff: Only checks test files that changed
-  # - With --mode=all: Checks ALL test files in working directory
-
-# Example 2: Protective rule (ignores mode)
-type: for_each
-select:
-  type: select_files
-  path_pattern: 'yarn.lock'
-  select_all: true  # ALWAYS checks entire repository
-  # Mode doesn't matter - will always look for yarn.lock everywhere
-```
 
 ## Protection Levels
 
@@ -59,109 +39,7 @@ Use diff-based checking (default) for incremental improvements:
 - **Behavior**: Checks files based on mode selection
 - **Example use cases**: Naming conventions, import restrictions, code patterns
 
-### Best Practice
-Organize rules into separate files by protection level:
-```
-.codeguardian/
-  protective-rules.yaml   # Absolute requirements (use select_all: true)
-  development-rules.yaml  # Progressive improvements (mode-aware)
-```
 
-## ⚠️ Important: Task Implementation Validation
-
-When creating temporary validation rules to verify that a task has been implemented correctly (e.g., checking if a new feature was added), **you must use `select_all: true`** in your file selectors. This ensures the validation checks all files in the repository, not just modified files in the current diff.
-
-### Critical: Protecting Folders During Task Validation
-
-When validating tasks, it's **extremely important** to create rules that protect folders and files that should not be modified. This prevents unintended changes to critical parts of your codebase.
-
-**Example Protection Rules:**
-
-```yaml
-# protect-critical-folders.cg.yaml
-id: protect-critical-folders
-description: Ensure no changes are made to protected directories
-rule:
-  type: none_of
-  rules:
-    # Protect test files from being modified
-    - type: for_each
-      select:
-        type: select_files
-        path_pattern: 'tests/**/*'
-        status: ['modified', 'deleted']
-      assert:
-        type: assert_match
-        pattern: '.*'
-        should_match: true
-        message: 'Test files should not be modified during this task'
-    
-    # Protect configuration files
-    - type: for_each
-      select:
-        type: select_files
-        path_pattern: '{package.json,tsconfig.json,*.config.js}'
-        status: ['modified']
-      assert:
-        type: assert_match
-        pattern: '.*'
-        should_match: true
-        message: 'Configuration files should not be modified'
-    
-    # Protect documentation
-    - type: for_each
-      select:
-        type: select_files
-        path_pattern: '{*.md,docs/**/*}'
-        status: ['modified', 'added', 'deleted']
-      assert:
-        type: assert_match
-        pattern: '.*'
-        should_match: true
-        message: 'Documentation should not be changed in this task'
-```
-
-**Best Practices for Task Validation:**
-
-1. **Always include protection rules** alongside your validation rules
-2. **Be specific** about which folders/files can be modified
-3. **Use exclude patterns** when appropriate:
-
-```yaml
-# Allow changes only in specific folders
-id: restrict-changes-to-src
-rule:
-  type: for_each
-  select:
-    type: select_files
-    path_pattern: '**/*'
-    exclude_pattern: 'src/features/new-feature/**/*'
-    status: ['modified', 'added']
-  assert:
-    type: assert_match
-    pattern: '.*'
-    should_match: false
-    message: 'Changes should only be made in src/features/new-feature/'
-```
-
-**Example Complete Task Validation:**
-
-```yaml
-# task-validation.cg.yaml
-id: validate-feature-implementation
-rule:
-    type: for_each
-    select:
-        type: select_files
-        path_pattern: 'src/core/auth.ts'
-        select_all: true # ← REQUIRED for task validation!
-    assert:
-        type: assert_match
-        pattern: 'validateApiKey'
-        message: 'The auth module must implement validateApiKey function'
-```
-
-Without `select_all: true`, the validation might pass incorrectly because it would only check files that were modified in the current git diff.
 
 ### 1. Core Concept
 
@@ -244,169 +122,18 @@ language: 'typescript' # Required. The language to parse.
 - **Supported Languages**: `typescript`, `javascript`, `tsx`, `html`, `css`.
 - **`query`**: Refer to [ast-grep playground](https://ast-grep.github.io/playground.html) to craft queries.
 
-## Mode Troubleshooting
 
-### "Why isn't my rule catching this file?"
+## AST Pattern Syntax (Quick Reference)
 
-1. **File is untracked?** → Use `--mode=all`
-   ```bash
-   # Default mode won't see untracked files
-   codeguardian check --mode=all
-   ```
-
-2. **Rule uses select_all?** → Mode doesn't matter
-   ```yaml
-   select_all: true  # This rule sees everything regardless of mode
-   ```
-
-3. **File not staged?** → Stage it or use `--mode=all`
-   ```bash
-   git add myfile.js           # Option 1: Stage it
-   codeguardian check --mode=all  # Option 2: Use all mode
-   ```
-
-### "Why is my rule checking too many files?"
-
-Your rule might have `select_all: true`. This makes it check the entire repository regardless of mode:
-```yaml
-select:
-  type: select_files
-  path_pattern: '**/*.js'
-  select_all: true  # Remove this to respect mode
-```
-
-# Pattern Syntax Guide
-
-**Basic Pattern Matching**
-Patterns match through the full syntax tree, including nested expressions:
-```yaml
-# Pattern: a + 1
-# Matches all of these:
-#   const b = a + 1
-#   funcCall(a + 1)
-#   deeplyNested({ target: a + 1 })
-query: 'a + 1'
-```
-
-**Meta Variables (Single Node Matching)**
-Use `$` followed by uppercase letters, underscore, or digits to match any single AST node:
-```yaml
-# Valid meta variables: $META, $META_VAR, $META_VAR1, $_, $_123
-# Invalid: $invalid, $value, $123, $KEBAB-CASE
-
-# Pattern
-query: 'console.log($MSG)'
-
-# Matches:
-#   console.log('Hello World')
-#   console.log(variable)
-#   console.log(1 + 2)
-# Does NOT match:
-#   console.log()           # no argument
-#   console.log(a, b)       # too many arguments
-```
-
-**Multi Meta Variables (Zero or More Nodes)**
-Use `$$` to match zero or more AST nodes:
-```yaml
-# Pattern for function calls with any number of arguments
-query: 'console.log($$ARGS)'
-
-# Matches:
-#   console.log()                      # zero arguments
-#   console.log('hello')               # one argument
-#   console.log('debug:', key, value)  # multiple arguments
-#   console.log(...args)               # spread operator
-
-# Pattern for function definitions
-query: 'function $NAME($$PARAMS) { $$BODY }'
-
-# Matches:
-#   function foo() {}
-#   function bar(a, b, c) { return a + b + c }
-```
-
-**Meta Variable Capturing (Reuse Variables)**
-Same-named meta variables must match the same content:
-```yaml
-# Pattern
-query: '$VAR == $VAR'
-
-# Matches:
-#   a == a
-#   (x + 1) == (x + 1)
-# Does NOT match:
-#   a == b
-#   x == y
-```
-
-**Non-Capturing Variables (Performance Optimization)**
-Variables starting with `_` are not captured and can match different content:
-```yaml
-# Pattern
-query: '$_FUNC($_ARG)'
-
-# Matches (each $_FUNC can be different):
-#   test(a)
-#   foo(bar)
-#   different(functions)
-```
-
-**Advanced Patterns**
-
-```yaml
-# Match try-catch blocks with specific error handling
-query: |
-  try {
-    $$$TRY_BODY
-  } catch ($ERROR) {
-    $$$CATCH_BODY
-  }
-
-# Match arrow functions with specific patterns
-query: '($PARAM) => $BODY'
-
-# Match object destructuring
-query: 'const { $PROP, $$REST } = $OBJ'
-
-# Match class methods
-query: |
-  class $CLASS {
-    $METHOD($$PARAMS) {
-      $$$BODY
-    }
-  }
-
-# Match specific React patterns
-query: 'useState($INITIAL)'
-query: 'useEffect(() => { $$$ }, [$DEP])'
-```
-
-**Common Use Cases for AI Code Validation**
-
-1. **Detect unsafe patterns**:
-   ```yaml
-   query: 'eval($CODE)'  # Detect eval usage
-   query: 'innerHTML = $HTML'  # Detect potential XSS
-   ```
-
-2. **Enforce async/await patterns**:
-   ```yaml
-   query: 'async $FUNC($$) { $$$ }'  # Find async functions
-   query: '$PROMISE.then($CALLBACK)'  # Find promises that should use await
-   ```
-
-3. **React best practices**:
-   ```yaml
-   query: 'this.setState($STATE)'  # Find class component state updates
-   query: 'dangerouslySetInnerHTML={$HTML}'  # Find dangerous HTML usage
-   ```
-
-4. **Security patterns**:
-   ```yaml
-   query: 'process.env.$VAR'  # Find environment variable usage
-   query: 'require($MODULE)'  # Find dynamic requires
-   ```
+- **Basic**: `query: 'console.log($MSG)'` - Matches single argument
+- **Multi**: `query: 'console.log($$ARGS)'` - Matches any number of arguments  
+- **Reuse**: `query: '$VAR == $VAR'` - Same variable must match same content
+- **Examples**:
+  ```yaml
+  query: 'eval($CODE)'  # Detect eval usage
+  query: 'async $FUNC($$) { $$$ }'  # Find async functions
+  query: '$DB.query($QUERY + $VAR)'  # Detect SQL injection risk
+  ```
 
 ---
 
@@ -438,46 +165,12 @@ documentation: 'https://reactjs.org/docs/dom-elements.html#dangerouslysetinnerht
   Suggestion: Move shell scripts to scripts/ or bin/ directory
 ```
 
-##### ⚠️ Important: Regex Pattern Escaping in YAML
-
-When writing regex patterns in YAML, be careful with backslash escaping:
-
-1. **Single-quoted strings** (Recommended for regex): Backslashes are preserved literally
-   ```yaml
-   pattern: 'console\.log'  # Correct: \. matches literal dot
-   pattern: '\(mu\)'        # Correct: \( and \) match literal parentheses
-   ```
-
-2. **Double-quoted strings**: Backslashes need to be escaped
-   ```yaml
-   pattern: "console\\.log"  # Need double backslash
-   pattern: "\\(mu\\)"      # Need double backslash for literal parentheses
-   ```
-
-3. **Common regex patterns that need escaping**:
-   ```yaml
-   # Literal dots
-   pattern: 'package\.json'
-   
-   # Literal parentheses
-   pattern: 'function\(arg1, arg2\)'
-   
-   # Special regex characters that need escaping: . ^ $ * + ? { } [ ] \ | ( )
-   pattern: 'array\[0\]'     # Literal brackets
-   pattern: 'price: \$100'   # Literal dollar sign
-   pattern: 'C\+\+'          # Literal plus signs
-   ```
-
-4. **Complex patterns with multiple special characters**:
-   ```yaml
-   # Wrong - will cause YAML parsing errors:
-   pattern: 'PyErr_SetString\(PyExc_ValueError, "Viscosity \(mu\) and Length \(L\) cannot be zero."\)'
-   
-   # Correct - properly escaped:
-   pattern: 'PyErr_SetString\(PyExc_ValueError, "Viscosity \(mu\) and Length \(L\) cannot be zero\."\)'
-   ```
-
-**Pro tip**: Always use single quotes for regex patterns in YAML to avoid confusion with escaping. Test your patterns in a regex tester first, then paste them into single-quoted YAML strings.
+**⚠️ Regex in YAML**: Use single quotes to avoid escaping issues:
+```yaml
+pattern: 'console\.log'      # Correct: \. for literal dot
+pattern: 'package\.json'     # Literal dot
+pattern: 'array\[0\]'        # Literal brackets
+```
 
 #### `assert_count`
 
@@ -626,47 +319,23 @@ rule:
               pattern: 'from\s+["''](.*)/adapters'
 ```
 
-#### Pattern 4: Absolute Validation (Task Implementation & Feature Verification)
+#### Pattern 4: Absolute Validation (Task & Feature Verification)
 
-_Ensure critical features exist in the codebase, regardless of what has changed. Essential for task validation rules!_
+_Check features exist regardless of changes. Use `select_all: true` for task validation._
 
 ```yaml
-# Example 1: Validate a task implementation
-id: validate-new-cli-feature
+id: validate-feature-exists
 rule:
   type: for_each
   select:
     type: select_files
     path_pattern: 'src/cli/index.ts'
-    select_all: true  # ← MUST use for task validation!
+    select_all: true  # ← Check all files, not just changed
   assert:
     type: assert_match
     pattern: '--skip-missing-ast-grep'
     message: 'CLI must implement the new flag'
-
-# Example 2: Ensure security features exist
-id: validate-security-config
-rule:
-  type: for_each
-  select:
-    type: select_files
-    path_pattern: '**/security.config.{ts,js}'
-    select_all: true  # Check all files, not just changed ones
-  assert:
-    type: all_of
-    rules:
-      - type: assert_match
-        pattern: 'helmet'
-        message: 'Security config must use helmet middleware'
-      - type: assert_match
-        pattern: 'cors.*origin'
-        message: 'CORS must be configured with origin restrictions'
-      - type: assert_match
-        pattern: 'rateLimit'
-        message: 'Rate limiting must be configured'
 ```
-
-**Key Point:** When validating task implementations, always use `select_all: true` to check the current state of files, not just what changed in the diff.
 
 #### Pattern 5: Deny New File Creation
 
@@ -687,33 +356,6 @@ rule:
     should_match: false  # Fail if any new file is found
     message: 'New files are not allowed. This task should only modify existing files.'
 
-# Example 2: Deny new files except tests
-id: deny-new-files-except-tests
-rule:
-  type: for_each
-  select:
-    type: select_files
-    status: ['added']
-    exclude_pattern: '**/*.test.*'  # Allow test files
-  assert:
-    type: assert_match
-    pattern: '.*'
-    should_match: false
-    message: 'New files are not allowed except for test files.'
-
-# Example 3: Deny new files in specific directories
-id: deny-new-files-in-src
-rule:
-  type: for_each
-  select:
-    type: select_files
-    path_pattern: 'src/**/*'
-    status: ['added']
-  assert:
-    type: assert_match
-    pattern: '.*'
-    should_match: false
-    message: 'New files in src/ are not allowed. Only modifications permitted.'
 ```
 
 **Use Case:** Perfect for tasks that should only refactor, fix bugs, or update existing functionality without adding new files. This helps enforce that AI-generated code stays within the intended scope of changes.
@@ -736,29 +378,6 @@ rule:
     should_match: false
     message: 'Critical configuration files should not change more than 10% in a single commit'
 
-# Example 2: Flag files that are mostly rewritten
-id: detect-file-rewrites
-rule:
-  type: for_each
-  select:
-    type: select_file_changes
-    min_percentage: 80  # Select files that are 80%+ changed
-  assert:
-    type: assert_match
-    pattern: '.*'
-    should_match: true  # This will list all heavily modified files
-    message: 'File has been significantly rewritten (>80% changed). Please review carefully.'
-
-# Example 3: Ensure incremental changes only
-id: enforce-incremental-updates
-rule:
-  type: assert_count
-  select:
-    type: select_file_changes
-    min_percentage: 50  # Count files changed more than 50%
-  condition: '=='
-  value: 0
-  message: 'All changes should be incremental. No file should change more than 50% in a single commit.'
 ```
 
 **Use Case:** Essential for maintaining code stability, preventing AI from completely rewriting files, and ensuring changes are reviewable. Particularly useful for protecting critical configuration files and enforcing incremental development practices.
@@ -794,94 +413,8 @@ rule:
       message: 'Async function $NAME should include try-catch error handling'
 ```
 
-#### Enforce Consistent Import Patterns
 
-```yaml
-id: enforce-import-order
-description: Ensure imports follow the project convention
-rule:
-  type: for_each
-  select:
-    type: select_files
-    path_pattern: 'src/**/*.{ts,tsx}'
-  assert:
-    type: for_each
-    select:
-      type: select_ast_nodes
-      # Match imports from internal modules
-      query: 'import { $$IMPORTS } from "./$MODULE"'
-      language: 'typescript'
-    assert:
-      type: assert_property
-      property_path: 'loc.start.line'
-      expected_value: 10
-      operator: '>'
-      message: 'Internal imports should come after external imports (line 10+)'
-```
 
-#### Prevent Hardcoded Secrets Using Advanced Patterns
-
-```yaml
-id: no-hardcoded-secrets-advanced
-description: Detect various forms of hardcoded secrets
-rule:
-  type: for_each
-  select:
-    type: select_files
-    path_pattern: '**/*.{js,ts,tsx,jsx}'
-  assert:
-    type: none_of
-    rules:
-      # API key assignments
-      - type: for_each
-        select:
-          type: select_ast_nodes
-          query: '$VAR = "$SECRET"'
-          language: 'javascript'
-        assert:
-          type: assert_property
-          property_path: 'text'
-          expected_value: 'api.*key|secret|token|password'
-          operator: 'matches'
-      
-      # Object properties with secrets
-      - type: for_each
-        select:
-          type: select_ast_nodes
-          query: '{ $KEY: "$VALUE" }'
-          language: 'javascript'
-        assert:
-          type: assert_property
-          property_path: 'text'
-          expected_value: '^[A-Z0-9]{20,}$|^[a-f0-9]{32,}$'
-          operator: 'matches'
-```
-
-#### Validate React Hook Dependencies
-
-```yaml
-id: exhaustive-deps
-description: Ensure useEffect has correct dependencies
-rule:
-  type: for_each
-  select:
-    type: select_files
-    path_pattern: '**/*.{jsx,tsx}'
-  assert:
-    type: for_each
-    select:
-      type: select_ast_nodes
-      # Capture the effect function and dependency array
-      query: 'useEffect(() => { $$$EFFECT }, [$DEPS])'
-      language: 'typescript'
-    assert:
-      type: assert_property
-      property_path: 'text'
-      # Check if variables used in effect are in deps
-      expected_value: '$DEPS'
-      operator: 'includes'
-      message: 'useEffect dependencies may be incomplete'
-```
 
 #### Enforce Secure Database Queries
 
@@ -982,29 +515,6 @@ rule:
         suggestion: 'Build completed but success message was not found in output.'
 ```
 
-#### Pattern: Checking for Test Failures
-
-_Run a test command and ensure it fails (non-zero exit code) and that `stderr` contains a specific error._
-
-```yaml
-id: validate-expected-test-failure
-rule:
-  type: for_each
-  select:
-    type: select_command_output
-    command: 'npm test -- myFailingTest.test.ts'
-  assert:
-    type: all_of
-    rules:
-      - type: assert_command_output
-        target: 'exitCode'
-        condition: '!='
-        value: 0
-
-      - type: assert_command_output
-        target: 'stderr'
-        pattern: 'Expected to receive'
-```
 
 #### Pattern: Extracting and Validating a Metric from Command Output
 
@@ -1035,14 +545,76 @@ rule:
     suggestion: 'The total token count has exceeded the 50,000 limit.'
 ```
 
-**Explanation of the `extract_pattern`:**
-- `Total Tokens:`: Matches the literal text.
-- `\s*`: Matches zero or more whitespace characters.
-- `([\d,]+)`: This is the **capture group**.
-    - `[\d,]+` matches one or more characters that are either a digit (`\d`) or a comma (`,`).
-    - The parentheses `(...)` capture this part, which is what `AssertPropertyRule` will use as the value for comparison. The rule automatically handles stripping the commas before the numeric comparison.
 
-#### Pattern: Validating Import Locations
+###### Pattern 7: Prevent Files with Specific Naming Patterns
+
+_Detect and fail when files with certain suffixes exist (e.g., `_improved`, `_enhanced`, `_copy`)._
+
+This pattern is useful for preventing AI agents from creating alternative versions of files instead of updating the original.
+
+```yaml
+# Example 1: Fail if any *_improved.* files exist
+id: no-improved-files
+description: Prevent alternative file versions
+rule:
+  type: none_of
+  rules:
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*_improved.*'
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: true
+        message: 'Found file with "_improved" suffix. Please update the original file instead.'
+
+# Example 2: Check in --mode all (for existing files)
+# Run with: codeguardian check --mode all
+id: no-alternative-versions
+description: Detect any alternative file versions in the entire codebase
+rule:
+  type: none_of
+  rules:
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*[-_](improved|enhanced|new|v2|copy|backup|old)\.*'
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: true
+        message: 'Found alternative file version. Update the original file instead of creating duplicates.'
+```
+
+**Important Note about `assert_count` with `for_each`:**
+The `assert_count` assertion counts items within each file separately when used inside `for_each`. It does NOT count the total number of files selected. To check if ANY files match a pattern, use the `none_of` combinator pattern shown above.
+
+```yaml
+# WRONG - This won't work as expected:
+type: for_each
+select:
+  type: select_files
+  path_pattern: '**/*_improved.*'
+assert:
+  type: assert_count
+  condition: '=='
+  value: 0  # This checks count WITHIN each file, not file count
+
+# CORRECT - Use none_of pattern:
+type: none_of
+rules:
+  - type: for_each
+    select:
+      type: select_files
+      path_pattern: '**/*_improved.*'
+    assert:
+      type: assert_match
+      pattern: '.*'
+      should_match: true
+```
+
+# Pattern: Validating Import Locations
 
 _Ensure that files importing specific packages are only located in allowed directories._
 
@@ -1077,23 +649,6 @@ rule:
             message: 'OpenAI imports are only allowed in pkg/infrastructure/'
 ```
 
-**Alternative approach using nested for_each:**
-
-```yaml
-id: restrict-openai-imports-v2
-description: Files importing openai-go must be in infrastructure layer
-rule:
-  type: for_each
-  select:
-    type: select_files
-    path_pattern: '**/*.go'
-    exclude_pattern: 'pkg/infrastructure/**/*.go'  # Exclude allowed locations
-  assert:
-    type: assert_match
-    pattern: 'github\.com/sashabaranov/go-openai'
-    should_match: false
-    message: 'OpenAI imports are only allowed in pkg/infrastructure/'
-```
 
 ---
 
