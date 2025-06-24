@@ -188,4 +188,88 @@ export class UserService {
             expect(result.violations![0]?.file).toBe('src/domain/user.ts');
         });
     });
+
+    describe('line-count-validation.yaml', () => {
+        it('should detect files exceeding line count limit', async () => {
+            const yamlPath = path.join(__dirname, '../../examples/line-count-validation.cg.yaml');
+            const yaml = await fs.readFile(yamlPath, 'utf-8');
+            const rule = factory.loadFromYAML(yaml);
+
+            // Create a long Go file content (over 450 lines)
+            const longGoContent = Array.from({ length: 500 }, (_, i) => `// Line ${i + 1}`).join('\n');
+
+            const files: FileInfo[] = [
+                {
+                    path: 'src/large-file.go',
+                    status: 'modified',
+                    insertions: 0,
+                    deletions: 0,
+                    content: longGoContent,
+                },
+                {
+                    path: 'src/small-file.go',
+                    status: 'added',
+                    insertions: 0,
+                    deletions: 0,
+                    content: `package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, World!")
+}`,
+                },
+                {
+                    path: 'src/utils.ts', // Non-Go file should be ignored
+                    status: 'modified',
+                    insertions: 0,
+                    deletions: 0,
+                    content: Array.from({ length: 600 }, (_, i) => `// Line ${i + 1}`).join('\n'),
+                },
+            ];
+
+            const context = createMockContext(files);
+            const result = await rule.evaluate(context);
+
+            expect(result.passed).toBe(false);
+            expect(result.violations).toHaveLength(1);
+            expect(result.violations![0]?.file).toBe('src/large-file.go');
+            expect(result.violations![0]?.message).toContain('exceeds maximum line limit');
+        });
+
+        it('should pass when all Go files are within line limit', async () => {
+            const yamlPath = path.join(__dirname, '../../examples/line-count-validation.cg.yaml');
+            const yaml = await fs.readFile(yamlPath, 'utf-8');
+            const rule = factory.loadFromYAML(yaml);
+
+            const files: FileInfo[] = [
+                {
+                    path: 'src/small-file.go',
+                    status: 'added',
+                    insertions: 0,
+                    deletions: 0,
+                    content: `package main
+
+import "fmt"
+
+func main() {
+    fmt.Println("Hello, World!")
+}`,
+                },
+                {
+                    path: 'src/medium-file.go',
+                    status: 'modified',
+                    insertions: 0,
+                    deletions: 0,
+                    content: Array.from({ length: 200 }, (_, i) => `// Line ${i + 1}`).join('\n'),
+                },
+            ];
+
+            const context = createMockContext(files);
+            const result = await rule.evaluate(context);
+
+            expect(result.passed).toBe(true);
+            expect(result.violations).toHaveLength(0);
+        });
+    });
 });

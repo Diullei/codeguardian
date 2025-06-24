@@ -1,5 +1,5 @@
 import { RuleBuilder, RuleFactory, CountCondition, ComparisonOperator } from '../../types';
-import { AssertMatchRule, AssertCountRule, AssertPropertyRule, AssertCommandOutputRule } from '../../assertions';
+import { AssertMatchRule, AssertCountRule, AssertPropertyRule, AssertCommandOutputRule, AssertLineCountRule } from '../../assertions';
 
 export class AssertMatchBuilder implements RuleBuilder {
     build(config: any, _factory: RuleFactory) {
@@ -57,6 +57,19 @@ export class AssertCommandOutputBuilder implements RuleBuilder {
             config.first_lines,
             config.last_lines,
             config.should_match !== false
+        );
+    }
+}
+
+export class AssertLineCountBuilder implements RuleBuilder {
+    build(config: any, _factory: RuleFactory) {
+        return new AssertLineCountRule(
+            config.id || 'assert_line_count',
+            (config.operator as ComparisonOperator) || '<=',
+            config.max_lines || config.expected_value,
+            config.message,
+            config.suggestion,
+            config.documentation
         );
     }
 }

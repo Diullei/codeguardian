@@ -1,0 +1,15 @@
+description: "Enforce maximum line count limits for Go files"
+severity: error
+
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: '**/*.go'
+  assert:
+    type: assert_line_count
+    operator: '<='
+    max_lines: 450
+    message: "Go file exceeds maximum line limit of 450 lines"
+    suggestion: "Consider breaking this file into smaller modules or extracting functionality into separate files"
+    documentation: "Large files are harder to maintain and understand. Keep Go files under 450 lines for better code organization."

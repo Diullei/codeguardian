@@ -203,6 +203,29 @@ extract_pattern: 'Total Tokens: ([\d,]+)' # Optional. Regex with a capture group
     - `includes` (for strings and arrays)
     - `matches` (for checking a string against a regex `expected_value`)
 
+#### `assert_line_count`
+
+Validates the number of lines in files or text content. Useful for enforcing maximum file size limits to maintain code quality and readability.
+
+```yaml
+type: assert_line_count
+operator: '<=' # Required. Comparison operator: ==, !=, >, <, >=, <=
+max_lines: 450 # Required. The line count to compare against (can also use expected_value)
+message: 'Custom error message' # Optional. Override default message
+suggestion: 'Consider breaking this file into smaller modules' # Optional. Actionable guidance
+documentation: 'https://example.com/coding-standards' # Optional. Reference URL
+```
+
+- **Line Counting Rules**:
+  - Counts all non-empty lines including comments and whitespace-only lines
+  - Ignores trailing empty lines for accurate counting
+  - Works with string content, objects with `content`/`text` properties, or direct `lineCount` values
+
+- **Common Use Cases**:
+  - Enforce maximum file size limits (e.g., Go files ≤ 450 lines)
+  - Prevent overly large functions or classes
+  - Maintain code review-friendly file sizes
+
 ---
 
 ### 5. Combinators (Logic & Structure)
@@ -382,6 +405,53 @@ rule:
 
 **Use Case:** Essential for maintaining code stability, preventing AI from completely rewriting files, and ensuring changes are reviewable. Particularly useful for protecting critical configuration files and enforcing incremental development practices.
 
+#### Pattern 7: File Size Validation
+
+_Enforce maximum line count limits to maintain readable and maintainable code._
+
+```yaml
+# Example 1: Enforce Go file line limits
+id: go-file-size-limit
+description: Go files should not exceed 450 lines for maintainability
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: '**/*.go'
+  assert:
+    type: assert_line_count
+    operator: '<='
+    max_lines: 450
+    message: "Go file exceeds maximum line limit of 450 lines"
+    suggestion: "Consider breaking this file into smaller modules or extracting functionality"
+
+# Example 2: Multiple language file size limits
+id: file-size-limits
+description: Enforce different line limits per language
+rule:
+  type: all_of
+  rules:
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*.go'
+      assert:
+        type: assert_line_count
+        operator: '<='
+        max_lines: 450
+    - type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*.{ts,js}'
+      assert:
+        type: assert_line_count
+        operator: '<='
+        max_lines: 300
+        suggestion: "TypeScript/JavaScript files should be under 300 lines"
+```
+
+**Use Case:** Prevents overly large files that are hard to review, maintain, and understand. Encourages modular code organization and helps teams maintain consistent code quality standards.
+
 ---
 
 ### 7. Advanced AST Pattern Examples
@@ -546,7 +616,7 @@ rule:
 ```
 
 
-###### Pattern 7: Prevent Files with Specific Naming Patterns
+###### Pattern 8: Prevent Files with Specific Naming Patterns
 
 _Detect and fail when files with certain suffixes exist (e.g., `_improved`, `_enhanced`, `_copy`)._
 

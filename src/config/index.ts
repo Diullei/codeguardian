@@ -9,6 +9,7 @@ import {
     AssertCountBuilder,
     AssertPropertyBuilder,
     AssertCommandOutputBuilder,
+    AssertLineCountBuilder,
     AllOfBuilder,
     AnyOfBuilder,
     NoneOfBuilder,
@@ -30,6 +31,7 @@ export function createRuleFactory(): RuleFactory {
     factory.register('assert_count', new AssertCountBuilder());
     factory.register('assert_property', new AssertPropertyBuilder());
     factory.register('assert_command_output', new AssertCommandOutputBuilder());
+    factory.register('assert_line_count', new AssertLineCountBuilder());
 
     // Register combinator builders
     factory.register('all_of', new AllOfBuilder());
