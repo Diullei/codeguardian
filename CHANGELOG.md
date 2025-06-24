@@ -2,6 +2,24 @@
 
 All notable changes to Code Guardian will be documented in this file.
 
+## [0.1.0-beta.5] - 2025-06-24
+
+### Added
+- **Line Count Validation**: New `assert_line_count` assertion for enforcing file size limits
+  - Supports all comparison operators: `==`, `!=`, `>`, `<`, `>=`, `<=`
+  - Works with string content, objects with `content`/`text` properties, or direct `lineCount` values
+  - Ignores trailing empty lines for accurate counting
+  - Provides detailed error messages with file paths and actionable suggestions
+- **AssertLineCountRule**: Core implementation extending AssertionRule base class
+- **AssertLineCountBuilder**: YAML configuration builder supporting `max_lines` and `expected_value` properties
+- **Comprehensive Testing**: 15+ unit tests and integration tests with example configurations
+- **Documentation**: Updated cheat sheet with line count validation examples and patterns
+- **Example Configuration**: `line-count-validation.cg.yaml` demonstrating Go file limits (450 lines)
+
+### Changed
+- Updated rule factory registration to include new `assert_line_count` rule type
+- Enhanced cheat sheet with Pattern 7: File Size Validation examples
+
 ## [0.1.0-beta.4] - 2025-01-21
 
 ### Added
