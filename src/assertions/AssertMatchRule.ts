@@ -19,6 +19,26 @@ export class AssertMatchRule extends AssertionRule {
     }
 
     async assertWithDetails(item: any, _context: EvaluationContext): Promise<AssertionResult> {
+        // Special handling for deleted files
+        if (item && typeof item === 'object' && 'status' in item && item.status === 'deleted' && !item.content) {
+            // For deleted files, we can't match against content
+            // If we're expecting a match, it will fail (no content to match)
+            // If we're expecting no match, it will pass (no content means no match)
+            if (this.shouldMatch) {
+                return {
+                    passed: false,
+                    message: `Cannot match pattern against deleted file`,
+                    context: {
+                        suggestion: 'Deleted files have no content to match against. Use assert_property to check file status instead.',
+                        documentation: this.documentation,
+                    },
+                };
+            } else {
+                // If we don't want a match and the file is deleted, that's fine
+                return { passed: true };
+            }
+        }
+
         const text = this.extractText(item);
         const matches = this.pattern.test(text);
         const passed = this.shouldMatch ? matches : !matches;

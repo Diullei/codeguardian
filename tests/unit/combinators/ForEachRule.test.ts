@@ -88,6 +88,44 @@ describe('ForEachRule', () => {
         expect(result.violations).toHaveLength(0);
     });
 
+    it('should skip deleted files during validation', async () => {
+        const files: FileInfo[] = [
+            { path: 'src/existing.ts', status: 'modified', insertions: 5, deletions: 0, content: 'const x = 1;' },
+            { path: 'src/deleted.ts', status: 'deleted', insertions: 0, deletions: 10 },
+            { path: 'src/another.ts', status: 'modified', insertions: 3, deletions: 2, content: 'const y = 2;' },
+        ];
+
+        const selector = new SelectFilesRule('file-selector', 'src/**/*.ts');
+        const assertion = new AssertMatchRule('has-content', /const/, true);
+        const rule = new ForEachRule('for-each-test', selector, assertion);
+
+        const context = createMockContext(files);
+        const result = await rule.evaluate(context);
+
+        // Should pass because deleted files are skipped and other files have 'const'
+        expect(result.passed).toBe(true);
+        expect(result.violations).toHaveLength(0);
+    });
+
+    it('should not report violations for deleted files even when pattern would match path', async () => {
+        const files: FileInfo[] = [
+            { path: 'src/file_improved.ts', status: 'deleted', insertions: 0, deletions: 50 },
+            { path: 'src/regular.ts', status: 'modified', insertions: 5, deletions: 0, content: 'export function test() {}' },
+        ];
+
+        const selector = new SelectFilesRule('file-selector', '**/*improved*');
+        // This assertion would fail if we tried to match against the deleted file
+        const assertion = new AssertMatchRule('no-match', /THIS_SHOULD_NEVER_MATCH/, true);
+        const rule = new ForEachRule('for-each-test', selector, assertion);
+
+        const context = createMockContext(files);
+        const result = await rule.evaluate(context);
+
+        // Should pass because the deleted file is skipped
+        expect(result.passed).toBe(true);
+        expect(result.violations).toHaveLength(0);
+    });
+
     it('should extract file information from different item formats', async () => {
         const selector = new SelectFilesRule('file-selector');
         const assertion = new AssertMatchRule('test', /test/, false);

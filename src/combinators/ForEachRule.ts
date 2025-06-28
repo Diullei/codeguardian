@@ -28,12 +28,17 @@ export class ForEachRule extends CombinatorRule {
             // For file items, load the content if not already present
             let itemToAssert = item;
             if (item && typeof item === 'object' && 'path' in item && !item.content) {
-                try {
-                    const content = await context.repository.getFileContent(item.path);
-                    itemToAssert = { ...item, content };
-                } catch (error) {
-                    // If we can't get the content, use the item as-is
-                    itemToAssert = item;
+                // Check if this is a deleted file
+                const isDeleted = 'status' in item && item.status === 'deleted';
+                
+                if (!isDeleted) {
+                    try {
+                        const content = await context.repository.getFileContent(item.path);
+                        itemToAssert = { ...item, content };
+                    } catch (error) {
+                        // If we can't get the content, use the item as-is
+                        itemToAssert = item;
+                    }
                 }
             }
 

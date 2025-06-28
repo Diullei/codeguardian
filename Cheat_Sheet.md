@@ -616,7 +616,43 @@ rule:
 ```
 
 
-###### Pattern 8: Prevent Files with Specific Naming Patterns
+###### Pattern 8: Handling Deleted Files
+
+_Special behavior for deleted files in diff mode._
+
+```yaml
+# Note: Deleted files have no content to validate
+# assert_match with should_match: true will fail with helpful message
+# assert_match with should_match: false will pass (no content = no match)
+
+# To check if critical files were deleted:
+id: no-critical-files-deleted
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: '**/package.json'
+  assert:
+    type: assert_property
+    property_path: 'status'
+    expected_value: 'deleted'
+    operator: '!='
+
+# To exclude deleted files from validation:
+id: check-only-existing-files
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: '**/*.ts'
+    status: ['added', 'modified']  # Excludes deleted files
+  assert:
+    type: assert_match
+    pattern: 'console\.log'
+    should_match: false
+```
+
+#### Pattern 9: Prevent Files with Specific Naming Patterns
 
 _Detect and fail when files with certain suffixes exist (e.g., `_improved`, `_enhanced`, `_copy`)._
 

@@ -1,0 +1,46 @@
+# Example: Handling Deleted Files in CodeGuardian
+
+rules:
+  # Example 1: Check if critical files were deleted
+  - id: no-critical-files-deleted
+    description: Ensure critical configuration files are not deleted
+    rule:
+      type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/package.json'
+      assert:
+        type: assert_property
+        property_path: 'status'
+        expected_value: 'deleted'
+        operator: '!='
+
+  # Example 2: Prevent files with certain patterns (excluding deleted files)
+  - id: no-improved-files
+    description: Prevent files with 'improved' in the name
+    rule:
+      type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*improved*'
+        # Only check files that are added or modified, not deleted
+        status: ['added', 'modified']
+      assert:
+        type: assert_match
+        pattern: '.*'
+        should_match: false
+        suggestion: 'Remove files with "improved" in the name - use proper versioning instead'
+
+  # Example 3: Check content only in non-deleted files
+  - id: no-console-logs
+    description: No console.log statements in TypeScript files
+    rule:
+      type: for_each
+      select:
+        type: select_files
+        path_pattern: '**/*.ts'
+      assert:
+        type: assert_match
+        pattern: 'console\.log'
+        should_match: false
+        # Note: Deleted files will automatically pass this check since they have no content

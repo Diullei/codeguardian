@@ -1,0 +1,15 @@
+id: cheat-sheet-max-lines
+description: Ensure Cheat_Sheet.md does not exceed 800 lines to maintain readability
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: 'Cheat_Sheet.md'
+    select_all: true  # Check the file regardless of Git changes
+  assert:
+    type: assert_line_count
+    operator: '<='
+    max_lines: 800
+    message: 'Cheat_Sheet.md exceeds the maximum allowed 800 lines'
+    suggestion: 'The cheat sheet must remain concise while maintaining quality and objectivity. To fix: 1) Remove redundant examples that demonstrate the same concept, 2) Consolidate similar patterns into single examples, 3) Use more compact YAML formatting where possible, 4) Ensure each example adds unique value. Remember: this is a quick reference guide, not comprehensive documentation.'
+    documentation: 'https://github.com/diullei/codeguardian'
