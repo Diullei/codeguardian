@@ -40,6 +40,7 @@ export class ForEachRule extends CombinatorRule {
                         itemToAssert = item;
                     }
                 }
+                // For deleted files, pass them through without content so assertions can handle them appropriately
             }
 
             const itemContext = { ...context, currentItem: itemToAssert };

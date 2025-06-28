@@ -88,7 +88,7 @@ describe('ForEachRule', () => {
         expect(result.violations).toHaveLength(0);
     });
 
-    it('should skip deleted files during validation', async () => {
+    it('should handle deleted files with assert_match appropriately', async () => {
         const files: FileInfo[] = [
             { path: 'src/existing.ts', status: 'modified', insertions: 5, deletions: 0, content: 'const x = 1;' },
             { path: 'src/deleted.ts', status: 'deleted', insertions: 0, deletions: 10 },
@@ -102,26 +102,48 @@ describe('ForEachRule', () => {
         const context = createMockContext(files);
         const result = await rule.evaluate(context);
 
-        // Should pass because deleted files are skipped and other files have 'const'
-        expect(result.passed).toBe(true);
-        expect(result.violations).toHaveLength(0);
+        // Should fail because deleted file cannot be matched when should_match is true
+        expect(result.passed).toBe(false);
+        expect(result.violations).toHaveLength(1);
+        expect(result.violations?.[0]?.file).toBe('src/deleted.ts');
+        expect(result.violations?.[0]?.message).toContain('Cannot match pattern against deleted file');
     });
 
-    it('should not report violations for deleted files even when pattern would match path', async () => {
+    it('should report error for deleted files when assert_match expects content', async () => {
         const files: FileInfo[] = [
             { path: 'src/file_improved.ts', status: 'deleted', insertions: 0, deletions: 50 },
             { path: 'src/regular.ts', status: 'modified', insertions: 5, deletions: 0, content: 'export function test() {}' },
         ];
 
         const selector = new SelectFilesRule('file-selector', '**/*improved*');
-        // This assertion would fail if we tried to match against the deleted file
-        const assertion = new AssertMatchRule('no-match', /THIS_SHOULD_NEVER_MATCH/, true);
+        // This assertion expects to match content but deleted file has none
+        const assertion = new AssertMatchRule('must-match', /THIS_SHOULD_NEVER_MATCH/, true);
         const rule = new ForEachRule('for-each-test', selector, assertion);
 
         const context = createMockContext(files);
         const result = await rule.evaluate(context);
 
-        // Should pass because the deleted file is skipped
+        // Should fail because deleted file selected but cannot match content
+        expect(result.passed).toBe(false);
+        expect(result.violations).toHaveLength(1);
+        expect(result.violations?.[0]?.file).toBe('src/file_improved.ts');
+        expect(result.violations?.[0]?.message).toContain('Cannot match pattern against deleted file');
+    });
+
+    it('should pass for deleted files when assert_match has should_match=false', async () => {
+        const files: FileInfo[] = [
+            { path: 'src/deleted.ts', status: 'deleted', insertions: 0, deletions: 10 },
+            { path: 'src/existing.ts', status: 'modified', insertions: 5, deletions: 0, content: 'const x = 1;' },
+        ];
+
+        const selector = new SelectFilesRule('file-selector', 'src/**/*.ts');
+        const assertion = new AssertMatchRule('no-pattern', /console\.log/, false);
+        const rule = new ForEachRule('for-each-test', selector, assertion);
+
+        const context = createMockContext(files);
+        const result = await rule.evaluate(context);
+
+        // Should pass - deleted files auto-pass for should_match=false, existing file has no console.log
         expect(result.passed).toBe(true);
         expect(result.violations).toHaveLength(0);
     });
