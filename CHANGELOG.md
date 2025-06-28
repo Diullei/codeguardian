@@ -2,6 +2,25 @@
 
 All notable changes to Code Guardian will be documented in this file.
 
+## [0.1.0-beta.6] - 2025-06-28
+
+### Added
+- **Improved Deleted File Handling**: Enhanced support for validating deleted files in Git diffs
+  - `assert_match` now provides helpful error messages when attempting to validate deleted files
+  - Automatically passes "should not match" assertions for deleted files (no content = no match)
+  - Added suggestions to use `assert_property` for checking file deletion status
+- **ForEachRule Enhancement**: Skips content loading for deleted files to prevent errors
+- **New Examples**: Added `handle-deleted-files.yaml` demonstrating best practices for deleted file scenarios
+- **Comprehensive Tests**: Added integration tests covering various deleted file scenarios
+
+### Changed
+- Updated Cheat Sheet with Pattern 8: Handling Deleted Files section
+- Improved error messages to guide users toward appropriate validation strategies
+
+### Fixed
+- Fixed errors when trying to read content from deleted files during validation
+- Resolved issues with content-based assertions on files removed in diffs
+
 ## [0.1.0-beta.5] - 2025-06-24
 
 ### Added
