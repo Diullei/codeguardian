@@ -2,6 +2,32 @@
 
 All notable changes to Code Guardian will be documented in this file.
 
+## [0.1.0-beta.7] - 2025-07-02
+
+### Added
+- **`.cg-ignore` File Support**: Directories containing a `.cg-ignore` file are now automatically excluded from configuration auto-discovery
+  - Simply place a `.cg-ignore` file in any directory to skip it during validation
+  - Useful for example directories, test fixtures, or generated code
+  - File content is not parsed; only the presence of the file matters
+- **Claude Code Integration**: New `--claude-code-hook` flag enables seamless integration with Claude Code's hook system
+  - Exit with code 2 on violations (triggers Claude to automatically fix issues)
+  - Run silently when all rules pass (no output)
+  - Comprehensive documentation added for Claude Code integration setup
+- **AI Command Templates**: Added templates for development workflows to enhance AI-assisted development
+
+### Changed
+- Modernized README with a visual, user-friendly layout
+- Streamlined CONTRIBUTING.md with clearer instructions
+- Updated documentation to cover new `.cg-ignore` feature
+
+### Fixed
+- Examples directory is now properly excluded from rule validation
+
+### Removed
+- **Experimental Prompt Generation**: Removed the experimental `generate-prompt` command and related functionality
+  - This feature was behind the `CODEGUARDIAN_EXPERIMENTAL` flag
+  - Simplified the codebase by removing `PromptGenerator` and related modules
+
 ## [0.1.0-beta.6] - 2025-06-28
 
 ### Added
