@@ -104,7 +104,7 @@ rule:
       select:
         type: select_files
         path_pattern: '**/*.{md,yaml}'
-        exclude_pattern: 'node_modules/**'
+        exclude_pattern: '{node_modules,examples}/**'
         status: ['added', 'modified']
       assert:
         type: none_of

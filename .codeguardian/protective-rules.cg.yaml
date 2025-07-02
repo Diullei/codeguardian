@@ -93,7 +93,7 @@ rule:
       select:
         type: select_files
         path_pattern: '**/*.{test,spec}.{ts,js,tsx,jsx}'
-        exclude_pattern: 'tests/**/*'
+        exclude_pattern: '{tests,examples}/**/*'
         status: ['added']  # Only check newly added test files
       assert:
         type: assert_match
