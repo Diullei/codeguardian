@@ -168,6 +168,7 @@ last_lines: 10 # Check only last N lines
 - **AST Languages**: Currently supports TypeScript, JavaScript, TSX, HTML, CSS via `@ast-grep/napi`
 - **Pattern Matching**: File patterns use minimatch glob syntax
 - **Regex in YAML**: Use single quotes to avoid escaping issues
+- **Directory Exclusion**: Place a `.cg-ignore` file in any directory to exclude it from configuration auto-discovery
 
 ## Mode vs select_all: Understanding the Difference
 
@@ -184,6 +185,27 @@ select:
   path_pattern: 'yarn.lock'
   select_all: true  # Ignores mode, always checks if yarn.lock exists anywhere
 ```
+
+## Directory Exclusion with .cg-ignore
+
+Code Guardian automatically skips directories containing a `.cg-ignore` file when auto-discovering configuration files. This is useful for:
+
+- **Example configurations** that shouldn't be enforced on the project
+- **Test fixtures** with mock rules
+- **Third-party code** with their own validation rules
+- **Temporary or experimental** rule configurations
+
+### Usage
+
+Simply create an empty `.cg-ignore` file in any directory you want to exclude:
+
+```bash
+touch examples/.cg-ignore
+```
+
+The file content is not parsed - only its presence matters. The directory and all its subdirectories will be skipped during configuration discovery.
+
+**Note**: This only affects auto-discovery. You can still explicitly specify configurations from ignored directories using the `-c` flag.
 
 ## AST Pattern Syntax
 

@@ -134,6 +134,14 @@ These prompts help ensure consistent, high-quality contributions when working wi
 - **Git-Aware**: We validate diffs, not entire codebases
 - **Performance**: Only analyze changed files
 - **Testing**: Unit tests for rules, integration tests for workflows
+- **Directory Skipping**: Directories with `.cg-ignore` files are automatically excluded
+
+### Note on Examples Directory
+
+The `examples/` directory contains a `.cg-ignore` file, which tells Code Guardian to skip it during validation. This means:
+- Example rules won't be enforced when running `codeguardian check`
+- You can safely test example configurations without affecting project validation
+- To validate example files specifically, use: `codeguardian check -c examples/specific-rule.yaml`
 
 See [CLAUDE.md](CLAUDE.md) for details.
 

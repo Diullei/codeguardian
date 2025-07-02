@@ -36,6 +36,7 @@ Code Guardian is a validation tool that helps you maintain code quality and arch
 - 🔍 **AST-Aware** - Search code structure with `ast-grep` integration
 - 📦 **Zero Config** - Sensible defaults with full customization when needed
 - 🛡️ **Git-Native** - Works seamlessly with branches, commits, and diffs
+- 🚫 **Smart Exclusions** - Use `.cg-ignore` files to skip directories
 
 ## 🚀 Quick Start
 
