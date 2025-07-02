@@ -6,9 +6,12 @@ export interface ConsoleReporterOptions {
 
 export class ConsoleReporter implements ValidationReporter {
     private readonly claudeCodeHook: boolean;
+    private log: typeof console.log;
 
     constructor(options: ConsoleReporterOptions = {}) {
         this.claudeCodeHook = options.claudeCodeHook || false;
+        // In claude-code-hook mode, use stderr for output
+        this.log = this.claudeCodeHook ? console.error : console.log;
     }
 
     private readonly colors = {
@@ -32,31 +35,31 @@ export class ConsoleReporter implements ValidationReporter {
         }
 
         // Session header (pytest style)
-        console.log(this.color('='.repeat(80), 'cyan'));
-        console.log(this.color('validation session starts', 'cyan', 'bright'));
-        console.log(`platform ${process.platform} -- Node ${process.version}, codeguardian-1.0.0`);
-        console.log(`rootdir: ${process.cwd()}`);
+        this.log(this.color('='.repeat(80), 'cyan'));
+        this.log(this.color('validation session starts', 'cyan', 'bright'));
+        this.log(`platform ${process.platform} -- Node ${process.version}, codeguardian-1.0.0`);
+        this.log(`rootdir: ${process.cwd()}`);
         const individualRules = report.summary.totalIndividualRules || 0;
         const configFiles = report.results.length;
-        console.log(`collected ${report.summary.totalFiles} files, ${individualRules} ${individualRules === 1 ? 'rule' : 'rules'} (${configFiles} config ${configFiles === 1 ? 'file' : 'files'})`);
-        console.log('');
+        this.log(`collected ${report.summary.totalFiles} files, ${individualRules} ${individualRules === 1 ? 'rule' : 'rules'} (${configFiles} config ${configFiles === 1 ? 'file' : 'files'})`);
+        this.log('');
 
         // Violations (keep existing detailed format)
         if (!report.passed && report.results.some(r => !r.passed)) {
-            console.log(this.color('FAILURES', 'red', 'bright'));
-            console.log(this.color('='.repeat(80), 'red'));
+            this.log(this.color('FAILURES', 'red', 'bright'));
+            this.log(this.color('='.repeat(80), 'red'));
 
             report.results
                 .filter(r => !r.passed)
                 .forEach((result, index) => {
-                    if (index > 0) console.log('');
+                    if (index > 0) this.log('');
                     this.printRuleViolations(result);
                 });
         }
 
         // Summary (pytest style)
-        console.log('');
-        console.log(this.color('='.repeat(80), report.passed ? 'green' : 'red'));
+        this.log('');
+        this.log(this.color('='.repeat(80), report.passed ? 'green' : 'red'));
         this.printPytestStyleSummary(report);
     }
 
@@ -67,7 +70,7 @@ export class ConsoleReporter implements ValidationReporter {
         if (report.passed) {
             // Success format: "==== 12 rules passed in 0.12s ===="
             const passedText = `${summary.passedRules} ${summary.passedRules === 1 ? 'rule' : 'rules'} passed`;
-            console.log(
+            this.log(
                 this.color(
                     `${'='.repeat(4)} ${passedText} in ${duration.toFixed(2)}s ${'='.repeat(80 - passedText.length - 13)}`,
                     'green',
@@ -91,38 +94,38 @@ export class ConsoleReporter implements ValidationReporter {
             const textLength = fullText.replace(/\x1b\[[0-9;]*m/g, '').length; // Remove ANSI codes for length calculation
             const padding = Math.max(0, 80 - textLength - 8);
 
-            console.log(`${'='.repeat(4)} ${fullText} ${'='.repeat(padding)}`);
+            this.log(`${'='.repeat(4)} ${fullText} ${'='.repeat(padding)}`);
         }
 
         // Show file and violation counts
-        console.log('');
+        this.log('');
         const fileInfo = `Validated ${summary.totalFiles} ${summary.totalFiles === 1 ? 'file' : 'files'}`;
         const violationInfo = summary.violations > 0 
             ? `, found ${summary.violations} ${summary.violations === 1 ? 'violation' : 'violations'}`
             : '';
-        console.log(this.color(`${fileInfo}${violationInfo}`, 'dim'));
+        this.log(this.color(`${fileInfo}${violationInfo}`, 'dim'));
 
         // Additional pytest-style info
         if (!report.passed) {
-            console.log(
+            this.log(
                 this.color('\nHint: ', 'yellow') + 'use --format=json for machine-readable output'
             );
         }
     }
 
     private printRuleViolations(result: any): void {
-        console.log(this.color(result.ruleId, 'red', 'bright'));
+        this.log(this.color(result.ruleId, 'red', 'bright'));
 
         // Show configuration file path
         if (result.configFile) {
-            console.log(this.color(`From: ${result.configFile}`, 'cyan'));
+            this.log(this.color(`From: ${result.configFile}`, 'cyan'));
         }
 
         if (result.ruleDescription) {
-            console.log(this.color(`${result.ruleDescription}`, 'dim'));
+            this.log(this.color(`${result.ruleDescription}`, 'dim'));
         }
 
-        console.log(''); // Empty line before violations
+        this.log(''); // Empty line before violations
 
         result.violations.forEach((violation: ViolationDetail) => {
             this.printViolation(violation);
@@ -134,30 +137,30 @@ export class ConsoleReporter implements ValidationReporter {
         const location = this.formatLocation(violation);
 
         // Main error line (pytest uses > for the main assertion)
-        console.log(this.color(`> ${location}`, 'bright'));
-        console.log(this.color('[CHECK FAIL] ' + violation.message, 'red', 'bright'));
+        this.log(this.color(`> ${location}`, 'bright'));
+        this.log(this.color('[CHECK FAIL] ' + violation.message, 'red', 'bright'));
 
         // Context
         if (violation.context) {
             if (violation.context.code) {
-                console.log('');
+                this.log('');
                 // Show code snippet with line numbers (simplified)
                 const codeLines = violation.context.code.split('\n').slice(0, 3);
                 codeLines.forEach(line => {
-                    console.log(this.color(`  ${line}`, 'dim'));
+                    this.log(this.color(`  ${line}`, 'dim'));
                 });
             }
 
             if (violation.context.suggestion) {
-                console.log('');
-                console.log(this.color('  Suggestion: ', 'yellow') + violation.context.suggestion);
+                this.log('');
+                this.log(this.color('  Suggestion: ', 'yellow') + violation.context.suggestion);
             }
 
             if (violation.context.documentation) {
-                console.log(this.color('  See: ', 'cyan') + violation.context.documentation);
+                this.log(this.color('  See: ', 'cyan') + violation.context.documentation);
             }
         }
-        console.log(''); // Empty line between violations
+        this.log(''); // Empty line between violations
     }
 
     private formatLocation(violation: ViolationDetail): string {

@@ -124,22 +124,8 @@ async function runValidation(args: ValidateArgs) {
     const loader = new ConfigurationLoader();
     const configurations = await loader.loadConfigurations(args.config, args.repo, args.exclude);
 
-    // Only log to console if not using JSON format
-    if (args.format !== 'json') {
-        console.log(`Found ${configurations.length} configuration file(s):`);
-
-        // Sort configurations by relative path for better readability
-        const sortedConfigs = [...configurations].sort((a, b) => {
-            const pathA = path.relative(args.repo, a.path);
-            const pathB = path.relative(args.repo, b.path);
-            return pathA.localeCompare(pathB);
-        });
-
-        sortedConfigs.forEach(config => {
-            console.log(`  - ${path.relative(args.repo, config.path)}`);
-        });
-        console.log();
-    }
+    // Store configuration info for later use
+    const configurationFiles = configurations.map(config => path.relative(args.repo, config.path));
 
     // Create rule factory
     const factory = createRuleFactory();
@@ -272,6 +258,23 @@ async function runValidation(args: ValidateArgs) {
     const reporter = args.format === 'json' 
         ? new JsonReporter() 
         : new ConsoleReporter({ claudeCodeHook: args.claudeCodeHook });
+
+    // Only show configuration info if:
+    // 1. Not in JSON format
+    // 2. AND either not in claude-code-hook mode OR there are violations
+    if (args.format !== 'json' && (!args.claudeCodeHook || !overallPassed)) {
+        // Use stderr in claude-code-hook mode with violations
+        const log = args.claudeCodeHook && !overallPassed ? console.error : console.log;
+        
+        log(`Found ${configurations.length} configuration file(s):`);
+        
+        // Sort for readability
+        const sortedFiles = [...configurationFiles].sort();
+        sortedFiles.forEach(file => {
+            log(`  - ${file}`);
+        });
+        log();
+    }
 
     // Report results
     await reporter.report(report);
