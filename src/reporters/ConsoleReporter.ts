@@ -1,6 +1,16 @@
 import { ValidationReport, ValidationReporter, ViolationDetail } from './types';
 
+export interface ConsoleReporterOptions {
+    claudeCodeHook?: boolean;
+}
+
 export class ConsoleReporter implements ValidationReporter {
+    private readonly claudeCodeHook: boolean;
+
+    constructor(options: ConsoleReporterOptions = {}) {
+        this.claudeCodeHook = options.claudeCodeHook || false;
+    }
+
     private readonly colors = {
         reset: '\x1b[0m',
         bright: '\x1b[1m',
@@ -16,6 +26,11 @@ export class ConsoleReporter implements ValidationReporter {
     };
 
     report(report: ValidationReport): void {
+        // In Claude Code hook mode, run silently on success
+        if (this.claudeCodeHook && report.passed) {
+            return;
+        }
+
         // Session header (pytest style)
         console.log(this.color('='.repeat(80), 'cyan'));
         console.log(this.color('validation session starts', 'cyan', 'bright'));

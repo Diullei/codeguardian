@@ -20,6 +20,7 @@ interface ValidateArgs {
     format?: 'console' | 'json';
     mode?: Mode;
     skipMissingAstGrep?: boolean;
+    claudeCodeHook?: boolean;
 }
 
 interface GeneratePromptArgs {
@@ -88,6 +89,12 @@ const cli = yargs(hideBin(process.argv))
                     type: 'boolean',
                     description:
                         'Skip AST-based rules and show a warning if the ast-grep CLI is not installed',
+                    default: false,
+                })
+                .option('claude-code-hook', {
+                    type: 'boolean',
+                    description:
+                        'Claude Code hook compatibility mode: exit with code 2 on violations, run silently on success',
                     default: false,
                 })
                 .epilogue(
@@ -331,14 +338,17 @@ async function runValidation(args: ValidateArgs) {
     };
 
     // Select reporter based on format
-    const reporter = args.format === 'json' ? new JsonReporter() : new ConsoleReporter();
+    const reporter = args.format === 'json' 
+        ? new JsonReporter() 
+        : new ConsoleReporter({ claudeCodeHook: args.claudeCodeHook });
 
     // Report results
     await reporter.report(report);
 
     // Exit with appropriate code
     if (!overallPassed) {
-        process.exit(1);
+        // In Claude Code hook mode, exit with code 2 for violations
+        process.exit(args.claudeCodeHook ? 2 : 1);
     }
 }
 

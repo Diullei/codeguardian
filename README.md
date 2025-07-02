@@ -270,6 +270,12 @@ architectural compliance. Fix any violations before completing."
   Suggestion: Use repository interface instead
 ```
 
+### Claude Code Integration
+
+Code Guardian provides seamless integration with [Claude Code hooks](https://docs.anthropic.com/en/docs/claude-code/hooks) for automatic validation. With the `--claude-code-hook` flag, violations trigger Claude to automatically fix issues before proceeding.
+
+📖 **[See the complete Claude Code integration guide →](docs/claude-code-integration.md)**
+
 ## 🧩 Rule Composition
 
 Code Guardian uses simple primitives that compose into powerful rules:
@@ -281,6 +287,7 @@ Code Guardian uses simple primitives that compose into powerful rules:
 ## 📖 Documentation
 
 - **[Technical Guide](docs/technical-guide.md)** - Detailed rule documentation
+- **[Claude Code Integration](docs/claude-code-integration.md)** - Automatic validation with Claude Code hooks
 - **[Cheat Sheet](Cheat_Sheet.md)** - Complete syntax reference with examples
 - **[Examples](examples/)** - Real-world rule configurations
 
@@ -311,6 +318,7 @@ Options:
   -m, --mode     Validation scope             [diff|all|staged] [default: "diff"]
   -f, --format   Output format                [console|json] [default: "console"]
   --skip-missing-ast-grep  Skip AST rules if ast-grep not installed
+  --claude-code-hook       Claude Code hook mode (exit 2 on errors, silent on success)
 ```
 
 ## 🗺️ Project Status
