@@ -1,0 +1,12 @@
+# Code Guardian Directory Skip Marker
+#
+# The presence of this file (.cg-ignore) tells Code Guardian to completely skip
+# this directory and all its subdirectories when auto-discovering configuration files.
+#
+# This is useful for:
+# - Example configurations that shouldn't be enforced
+# - Test fixtures and mock rules
+# - Third-party code with their own rules
+# - Any directory you want Code Guardian to ignore
+#
+# Note: The content of this file is not parsed. Only its presence matters.

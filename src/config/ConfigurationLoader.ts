@@ -28,6 +28,28 @@ export class ConfigurationLoader {
     ];
 
     /**
+     * Get all directories containing .cg-ignore files
+     * @param basePath Base directory to search from
+     * @returns Array of directory patterns to ignore
+     */
+    private async getSkipDirectories(basePath: string): Promise<string[]> {
+        const skipDirs: string[] = [];
+        const cgignoreFiles = await glob('**/.cg-ignore', {
+            cwd: basePath,
+            absolute: true,
+            ignore: ['**/node_modules/**', '**/dist/**', '**/.git/**'],
+        });
+
+        for (const cgignorePath of cgignoreFiles) {
+            const dir = path.dirname(cgignorePath);
+            const relativePath = path.relative(basePath, dir);
+            skipDirs.push(`${relativePath}/**`);
+        }
+
+        return skipDirs;
+    }
+
+    /**
      * Load configuration files based on pattern or auto-discovery
      * @param pattern Optional glob pattern or specific file path
      * @param basePath Base directory to search from
@@ -42,9 +64,12 @@ export class ConfigurationLoader {
         const absoluteBasePath = path.resolve(basePath);
         let filePaths: string[] = [];
 
+        // Get directories to skip based on .cg-ignore files
+        const skipDirectories = await this.getSkipDirectories(absoluteBasePath);
+
         // Build ignore patterns
         const defaultIgnore = ['**/node_modules/**', '**/dist/**', '**/.git/**'];
-        const ignorePatterns = [...defaultIgnore, ...(excludePatterns || [])];
+        const ignorePatterns = [...defaultIgnore, ...skipDirectories, ...(excludePatterns || [])];
 
         if (pattern) {
             // If pattern is provided, check if it's a specific file or a glob pattern
