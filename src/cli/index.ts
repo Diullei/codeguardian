@@ -9,7 +9,6 @@ import { createRuleFactory, ConfigurationLoader } from '../config';
 import { ResultCache } from '../core';
 import { EvaluationContext, Mode } from '../types';
 import { ConsoleReporter, JsonReporter, ValidationReport } from '../reporters';
-import { PromptGenerator } from '../prompt-generator';
 
 interface ValidateArgs {
     config?: string;
@@ -23,13 +22,6 @@ interface ValidateArgs {
     claudeCodeHook?: boolean;
 }
 
-interface GeneratePromptArgs {
-    task?: string;
-    taskFile?: string;
-    output?: string;
-    mode?: 'task' | 'rule';
-    description?: string;
-}
 
 const cli = yargs(hideBin(process.argv))
     .scriptName('codeguardian')
@@ -118,67 +110,6 @@ const cli = yargs(hideBin(process.argv))
                 console.error('Error:', error instanceof Error ? error.message : String(error));
                 process.exit(1);
             }
-        }
-    )
-    .command<GeneratePromptArgs>(
-        'generate-prompt',
-        'Generate a prompt for an AI to write validation rules',
-        (yargs) => {
-            return yargs
-                .option('mode', {
-                    alias: 'm',
-                    type: 'string',
-                    choices: ['task', 'rule'] as const,
-                    description: 'Generation mode: task (validation for a specific task) or rule (general rule from description)',
-                    default: 'task',
-                })
-                .option('task', {
-                    type: 'string',
-                    description: 'The task description for the AI (used in task mode).',
-                })
-                .option('task-file', {
-                    type: 'string',
-                    description: 'Path to a file containing the task description (used in task mode).',
-                })
-                .option('description', {
-                    alias: 'd',
-                    type: 'string',
-                    description: 'Rule description for generating a validation rule (used in rule mode).',
-                })
-                .option('output', {
-                    alias: 'o',
-                    type: 'string',
-                    description: 'Path to save the generated output (prompt in task mode, rule YAML in rule mode).',
-                })
-                .check((argv) => {
-                    if (argv.mode === 'task' && !argv.task && !argv.taskFile) {
-                        throw new Error('In task mode, you must provide the task description using either --task or --task-file.');
-                    }
-                    if (argv.mode === 'rule' && !argv.description) {
-                        throw new Error('In rule mode, you must provide a rule description using --description.');
-                    }
-                    return true;
-                })
-                .conflicts('task', 'task-file')
-                .epilogue(
-                    'Examples:\n' +
-                    '  # Generate prompt for task validation (default mode)\n' +
-                    '  $ codeguardian generate-prompt --task "Add user authentication"\n\n' +
-                    '  # Generate a rule from description\n' +
-                    '  $ codeguardian generate-prompt --mode rule --description "No console.log in production code"\n\n' +
-                    '  # Save output to file\n' +
-                    '  $ codeguardian generate-prompt -m rule -d "Enforce clean architecture" -o clean-arch.cg.yaml'
-                );
-        },
-        async (args) => {
-            // Check if experimental features are enabled
-            if (!process.env.CODEGUARDIAN_EXPERIMENTAL) {
-                console.error('Error: The generate-prompt command is experimental and requires the CODEGUARDIAN_EXPERIMENTAL environment variable to be set.');
-                console.error('To enable experimental features, run:');
-                console.error('  export CODEGUARDIAN_EXPERIMENTAL=1');
-                process.exit(1);
-            }
-            await runPromptGeneration(args);
         }
     )
     .demandCommand(1, 'You need at least one command before moving on')
@@ -349,38 +280,6 @@ async function runValidation(args: ValidateArgs) {
     if (!overallPassed) {
         // In Claude Code hook mode, exit with code 2 for violations
         process.exit(args.claudeCodeHook ? 2 : 1);
-    }
-}
-
-async function runPromptGeneration(args: GeneratePromptArgs) {
-    try {
-        const generator = new PromptGenerator();
-        let output: string;
-
-        if (args.mode === 'rule') {
-            // Rule generation mode
-            output = await generator.generateRule(args.description!);
-        } else {
-            // Task validation mode (default)
-            let taskContent: string;
-            if (args.taskFile) {
-                taskContent = await fs.readFile(args.taskFile, 'utf-8');
-            } else {
-                taskContent = args.task!;
-            }
-            output = await generator.generateTaskPrompt(taskContent);
-        }
-
-        if (args.output) {
-            await fs.writeFile(args.output, output);
-            const messageType = args.mode === 'rule' ? 'Rule' : 'Prompt';
-            console.log(`${messageType} successfully saved to: ${args.output}`);
-        } else {
-            console.log(output);
-        }
-    } catch (error) {
-        console.error('Error generating output:', error instanceof Error ? error.message : String(error));
-        process.exit(1);
     }
 }
 

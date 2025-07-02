@@ -193,7 +193,7 @@ Code Guardian automatically skips directories containing a `.cg-ignore` file whe
 - **Example configurations** that shouldn't be enforced on the project
 - **Test fixtures** with mock rules
 - **Third-party code** with their own validation rules
-- **Temporary or experimental** rule configurations
+- **Temporary** rule configurations
 
 ### Usage
 
