@@ -1,176 +1,146 @@
 # Contributing to Code Guardian
 
-Thank you for your interest in contributing to Code Guardian! This guide will help you get started with development.
+Thanks for your interest! Let's get you set up quickly.
 
-## Development Setup
-
-### Prerequisites
-
-- Node.js >= 16.0.0
-- npm
-- Git
-
-### Getting Started
-
-1. Fork and clone the repository:
+## 🚀 Quick Setup
 
 ```bash
+# 1. Fork and clone
 git clone https://github.com/[your-username]/codeguardian.git
 cd codeguardian
-```
 
-2. Install dependencies:
-
-```bash
+# 2. Install deps
 npm install
-```
 
-3. Build the project:
-
-```bash
+# 3. Build
 npm run build
 ```
 
-### Running Locally
+## 🔧 Development
 
-There are several ways to run Code Guardian during development:
+### Run Locally
 
-#### Method 1: Using npm link (Recommended)
-
-This method allows you to use `codeguardian` command globally while developing:
+**Important**: Always use npm scripts for validation to ensure proper exclusions are applied.
 
 ```bash
+# Check changed files (default)
+npm run check
+
+# Check all files
+npm run check:all
+
+# Check staged files only
+npm run check:staged
+```
+
+These scripts automatically exclude example configurations and test files.
+
+**For development testing:**
+
+```bash
+# Option 1: Global link
+npm run build && npm link
+codeguardian check  # Available globally
+
+# Option 2: Direct execution
 npm run build
-npm link
-```
-
-Now you can run Code Guardian from anywhere:
-
-```bash
-codeguardian check
-```
-
-To unlink when done:
-
-```bash
-npm unlink -g @diullei/codeguardian
-```
-
-#### Method 2: Direct execution
-
-Run the CLI directly without installation:
-
-```bash
-# Build first
-npm run build
-
-# Run directly
 ./dist/cli/index.js check
 ```
 
-#### Method 3: Using npm scripts
-
-The project includes a convenient npm script:
+### Essential Commands
 
 ```bash
-npm run check
+npm run build         # Build TypeScript
+npm run dev          # Watch mode
+npm test             # Run tests
+npm run lint         # Lint code
+npm run typecheck    # Type check
+npm run check:all    # Run all validation
 ```
-
-This builds the project and runs the check command with predefined options.
-
-## Development Workflow
-
-### Available Scripts
-
-- `npm run build` - Build TypeScript to dist/
-- `npm run dev` - Watch mode for development
-- `npm test` - Run all tests
-- `npm run lint` - Lint the codebase
-- `npm run typecheck` - Type checking without emitting files
-- `npm run format` - Format code with Prettier
-- `npm run clean` - Clean build output
 
 ### Testing
 
-Run tests during development:
-
 ```bash
-# Run all tests
+# All tests
 npm test
 
-# Run tests in watch mode
+# Watch mode
 npm run test:watch
 
-# Run a specific test file
+# Specific test
 npm test -- tests/unit/selectors/SelectFilesRule.test.ts
 ```
 
-### Code Quality
+## 📝 Submitting Changes
 
-Before submitting a PR, ensure your code passes all checks:
+### 1. Branch & Code
 
 ```bash
-# Type checking
+git checkout -b feature/your-feature
+```
+
+Follow existing patterns. Add tests. Keep it clean.
+
+### 2. Commit
+
+Use conventional commits:
+
+```bash
+git commit -m "feat: add new selector"
+git commit -m "fix: resolve issue"
+git commit -m "docs: update readme"
+```
+
+### 3. Quality Check
+
+Before pushing:
+
+```bash
 npm run typecheck
-
-# Linting
 npm run lint
-
-# Run Code Guardian's own checks
-npm run check
+npm run test
+npm run check:all
 ```
 
-## Making Changes
+### 4. PR
 
-1. Create a feature branch:
+Push and create a PR with clear description.
 
-```bash
-git checkout -b feature/your-feature-name
-```
+## 🤖 AI-Assisted Development
 
-2. Make your changes following the existing code style
+### Using Claude Code or Other AI Tools
 
-3. Add tests for new functionality
+We provide ready-made prompts for common tasks:
 
-4. Ensure all tests pass and code quality checks succeed
+**Creating new rules:**
 
-5. Commit your changes following conventional commits:
+- Use `.claude/commands/development/cg-create-rules.md` as a template
+- The prompt fetches our cheat sheet and guides rule creation
+- Works with Claude Code: `/cg-create-rules prevent console.log in production`
+- Or copy the prompt for any AI assistant
 
-```bash
-git commit -m "feat: add new selector for X"
-git commit -m "fix: resolve issue with Y"
-git commit -m "docs: update documentation for Z"
-```
+**Checking and fixing violations:**
 
-## Submitting a Pull Request
+- Use `.claude/commands/development/cg-check.md` as a template
+- Runs validation and fixes violations automatically
+- Works with Claude Code: `/cg-check`
+- Guides the AI to fix code rather than change rules
 
-1. Push your changes to your fork:
+These prompts help ensure consistent, high-quality contributions when working with AI assistants.
 
-```bash
-git push origin feature/your-feature-name
-```
+## 🏗️ Architecture Notes
 
-2. Create a Pull Request on GitHub
+- **Rule Pattern**: selector → assertion → combinator
+- **Git-Aware**: We validate diffs, not entire codebases
+- **Performance**: Only analyze changed files
+- **Testing**: Unit tests for rules, integration tests for workflows
 
-3. Describe your changes and link any related issues
+See [CLAUDE.md](CLAUDE.md) for details.
 
-4. Wait for review and address any feedback
+## 💬 Need Help?
 
-## Architecture Guidelines
+Open an issue. Check existing ones first.
 
-When contributing, please follow these architectural principles:
+---
 
-- **Rule Hierarchy**: Maintain the selector → assertion → combinator pattern
-- **Git Integration**: Remember that Code Guardian is Git-aware and validates diffs
-- **Performance**: Optimize for analyzing only changed files
-- **Testing**: Write unit tests for new rules and integration tests for workflows
-
-See [CLAUDE.md](CLAUDE.md) for detailed architectural information.
-
-## Need Help?
-
-- Open an issue for bug reports or feature requests
-- Check existing issues before creating a new one
-- Join discussions in the issues section
-
-Thank you for contributing to Code Guardian!
+Thanks for contributing! 🎉
