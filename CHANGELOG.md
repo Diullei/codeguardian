@@ -2,6 +2,15 @@
 
 All notable changes to Code Guardian will be documented in this file.
 
+## [0.1.0-beta.8] - 2025-07-02
+
+### Fixed
+- **Claude Code Hook Integration**: Fixed `--claude-code-hook` flag behavior
+  - Now runs completely silently when all rules pass (exit code 0)
+  - Outputs to stderr when violations are found (exit code 2)
+  - Suppresses configuration file listing in claude-code-hook mode
+  - Added comprehensive tests for claude-code-hook behavior
+
 ## [0.1.0-beta.7] - 2025-07-02
 
 ### Added
