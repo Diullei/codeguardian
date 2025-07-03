@@ -47,8 +47,16 @@ export class ForEachRule extends CombinatorRule {
 
             try {
                 if (this.assertion instanceof AssertionRule) {
+                    // For AssertPropertyRule, we need to pass the full item object
+                    // so it can access properties like path, status, etc.
+                    // For other assertions that work on content, we pass the content
+                    const isPropertyAssertion = this.assertion.constructor.name === 'AssertPropertyRule';
+                    const itemForAssertion = isPropertyAssertion 
+                        ? itemToAssert 
+                        : (itemToAssert.content || itemToAssert);
+                    
                     const assertionResult = await this.assertion.assertWithDetails(
-                        itemToAssert.content || itemToAssert,
+                        itemForAssertion,
                         itemContext
                     );
                     if (!assertionResult.passed) {
