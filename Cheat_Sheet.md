@@ -203,6 +203,8 @@ extract_pattern: 'Total Tokens: ([\d,]+)' # Optional. Regex with a capture group
     - `includes` (for strings and arrays)
     - `matches` (for checking a string against a regex `expected_value`)
 
+**Note**: Currently, `assert_property` does not support custom `message` or `suggestion` fields. These will be ignored if provided.
+
 #### `assert_line_count`
 
 Validates the number of lines in files or text content. Useful for enforcing maximum file size limits to maintain code quality and readability.
@@ -719,6 +721,28 @@ rules:
       pattern: '.*'
       should_match: true
 ```
+
+#### Pattern 10: Enforce File Naming Conventions
+
+_Ensure files follow specific naming patterns using `assert_property` with the `matches` operator._
+
+```yaml
+# Test files must start with test_
+id: test-file-naming
+rule:
+  type: for_each
+  select:
+    type: select_files
+    path_pattern: 'tests/**/*.py'
+    exclude: ['**/__init__.py']
+  assert:
+    type: assert_property
+    property_path: 'path'  # Check the file's path
+    expected_value: '/test_[^/]+\.py$'  # Regex to match filename at end of path
+    operator: 'matches'
+```
+
+**Note**: The `matches` operator checks the entire file path. Use patterns like `/filename\.ext$` to match just the filename.
 
 # Pattern: Validating Import Locations
 
