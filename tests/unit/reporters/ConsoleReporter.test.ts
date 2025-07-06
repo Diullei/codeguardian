@@ -80,10 +80,11 @@ describe('ConsoleReporter', () => {
             // In claude-code-hook mode with violations, output goes to stderr
             expect(consoleErrorSpy).toHaveBeenCalled();
             expect(consoleLogSpy).not.toHaveBeenCalled();
-            // Should show session header
-            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('validation session starts'));
-            // Should show failures
-            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('FAILURES'));
+            // Should show compact format (not detailed session header)
+            expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('VIOLATIONS (1 total):'));
+            // Should not show detailed format headers
+            expect(consoleErrorSpy).not.toHaveBeenCalledWith(expect.stringContaining('validation session starts'));
+            expect(consoleErrorSpy).not.toHaveBeenCalledWith(expect.stringContaining('FAILURES'));
         });
     });
 

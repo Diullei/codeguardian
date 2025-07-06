@@ -2,6 +2,36 @@
 
 All notable changes to Code Guardian will be documented in this file.
 
+## [0.1.0-beta.9] - 2025-01-06
+
+### Added
+- **Repository Auto-Discovery**: Automatically finds Git repository root when run from any subdirectory
+  - Searches upward for `.git` directory starting from current working directory
+  - No more need to specify repository path in most cases
+  - Works seamlessly with monorepos and nested project structures
+- **`-C` Flag Support**: Change to directory before running (like `git -C`)
+  - `codeguardian check -C /path/to/project` changes to directory first, then auto-discovers
+  - Useful for scripts and automation that need to run from different locations
+- **Compact Output Format for Claude Code Integration**: Token-efficient output exclusively for `--claude-code-hook` mode
+  - ~80% token reduction while preserving all essential violation information
+  - Smart violation prioritization (errors first, then by file specificity)
+  - Intelligent fix suggestions based on violation patterns
+  - Smart truncation showing first 5 violations with preserved CLI command for viewing more
+  - Removes ANSI colors, headers, and configuration listings for cleaner AI parsing
+
+### Changed
+- **`--repo` Flag Behavior**: Now disables auto-discovery when provided (previously always required)
+  - `codeguardian check` → auto-discovers repository root
+  - `codeguardian check --repo /path` → uses explicit path, no auto-discovery
+- **Configuration File Listing**: Suppressed in `--claude-code-hook` mode to save tokens
+- **Exit Code Consistency**: Properly returns exit code 2 in claude-code-hook mode for violations
+
+### Technical Details
+- Added `findGitRoot()` utility for repository discovery
+- Added `generateFullViewCommand()` for preserving CLI arguments in compact output
+- Enhanced `ConsoleReporter` with compact mode that activates only for claude-code-hook
+- Comprehensive test coverage for all new auto-discovery and compact mode features
+
 ## [0.1.0-beta.8] - 2025-07-02
 
 ### Fixed
