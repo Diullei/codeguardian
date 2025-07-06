@@ -264,6 +264,15 @@ async function runValidation(args: ValidateArgs) {
         results: allResults,
         diff,
         duration,
+        originalCliArgs: {
+            config: args.config,
+            exclude: args.exclude,
+            repo: args.repo,
+            C: args.C,
+            base: args.base,
+            head: args.head,
+            mode: args.mode,
+        },
     };
 
     // Select reporter based on format
@@ -273,19 +282,16 @@ async function runValidation(args: ValidateArgs) {
 
     // Only show configuration info if:
     // 1. Not in JSON format
-    // 2. AND either not in claude-code-hook mode OR there are violations
-    if (args.format !== 'json' && (!args.claudeCodeHook || !overallPassed)) {
-        // Use stderr in claude-code-hook mode with violations
-        const log = args.claudeCodeHook && !overallPassed ? console.error : console.log;
-        
-        log(`Found ${configurations.length} configuration file(s):`);
+    // 2. Not in claude-code-hook mode (to save tokens)
+    if (args.format !== 'json' && !args.claudeCodeHook) {
+        console.log(`Found ${configurations.length} configuration file(s):`);
         
         // Sort for readability
         const sortedFiles = [...configurationFiles].sort();
         sortedFiles.forEach(file => {
-            log(`  - ${file}`);
+            console.log(`  - ${file}`);
         });
-        log();
+        console.log();
     }
 
     // Report results

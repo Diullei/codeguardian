@@ -1,4 +1,5 @@
 import { ValidationReport, ValidationReporter, ViolationDetail } from './types';
+import { generateFullViewCommand } from '../utils/cliCommandBuilder';
 
 export interface ConsoleReporterOptions {
     claudeCodeHook?: boolean;
@@ -34,6 +35,57 @@ export class ConsoleReporter implements ValidationReporter {
             return;
         }
 
+        // Use compact format for claude-code-hook mode
+        if (this.claudeCodeHook && !report.passed) {
+            this.reportCompact(report);
+            return;
+        }
+
+        // Regular detailed format for normal mode
+        this.reportDetailed(report);
+    }
+
+    private reportCompact(report: ValidationReport): void {
+        // Collect all violations across all rules
+        const allViolations: Array<ViolationDetail & { ruleId: string }> = [];
+        
+        report.results
+            .filter(r => !r.passed)
+            .forEach(result => {
+                result.violations.forEach(violation => {
+                    allViolations.push({
+                        ...violation,
+                        ruleId: result.ruleId
+                    });
+                });
+            });
+
+        // Prioritize violations
+        const prioritizedViolations = this.prioritizeViolations(allViolations);
+        
+        // Determine how many to show
+        const maxToShow = 5;
+        const totalViolations = prioritizedViolations.length;
+        const violationsToShow = prioritizedViolations.slice(0, maxToShow);
+        const remainingCount = Math.max(0, totalViolations - maxToShow);
+
+        // Compact header
+        this.log(`VIOLATIONS (${totalViolations} total${remainingCount > 0 ? `, showing first ${violationsToShow.length}` : ''}):`)
+        this.log('');
+
+        // Show violations in compact format
+        violationsToShow.forEach(violation => {
+            this.printCompactViolation(violation);
+        });
+
+        // Show command to see all violations if truncated
+        if (remainingCount > 0 && report.originalCliArgs) {
+            const fullCommand = generateFullViewCommand(report.originalCliArgs);
+            this.log(`+${remainingCount} more violation${remainingCount === 1 ? '' : 's'}. Run: ${fullCommand}`);
+        }
+    }
+
+    private reportDetailed(report: ValidationReport): void {
         // Session header (pytest style)
         this.log(this.color('='.repeat(80), 'cyan'));
         this.log(this.color('validation session starts', 'cyan', 'bright'));
@@ -177,7 +229,109 @@ export class ConsoleReporter implements ValidationReporter {
         return location;
     }
 
+    private prioritizeViolations(violations: Array<ViolationDetail & { ruleId: string }>): Array<ViolationDetail & { ruleId: string }> {
+        return violations.sort((a, b) => {
+            // 1. Security/error severity first
+            if (a.severity === 'error' && b.severity !== 'error') return -1;
+            if (a.severity !== 'error' && b.severity === 'error') return 1;
+            
+            // 2. Files with line numbers (more specific) first
+            if (a.line !== undefined && b.line === undefined) return -1;
+            if (a.line === undefined && b.line !== undefined) return 1;
+            
+            // 3. Alphabetical by file
+            if (a.file && b.file) {
+                return a.file.localeCompare(b.file);
+            }
+            
+            return 0;
+        });
+    }
+
+    private printCompactViolation(violation: ViolationDetail & { ruleId: string }): void {
+        const location = this.formatLocation(violation);
+        const ruleDisplay = `[${violation.ruleId}]`;
+        
+        // Remove ANSI colors for claude-code-hook mode to save tokens
+        this.log(`${location} ${ruleDisplay}`);
+        
+        // Extract the issue from the message
+        const foundText = this.extractFoundText(violation);
+        if (foundText) {
+            this.log(`  Found: ${foundText}`);
+        }
+        
+        // Show fix suggestion if available
+        const fixText = this.extractFixText(violation);
+        if (fixText) {
+            this.log(`  Fix: ${fixText}`);
+        } else if (violation.context?.suggestion) {
+            this.log(`  Fix: ${violation.context.suggestion}`);
+        }
+        
+        this.log(''); // Empty line between violations
+    }
+
+    private extractFoundText(violation: ViolationDetail): string | null {
+        // Try to extract meaningful "found" text from violation message or context
+        if (violation.context?.code) {
+            // Get the first non-empty line of code, truncated
+            const firstLine = violation.context.code.split('\n').find(line => line.trim());
+            if (firstLine) {
+                return firstLine.trim().substring(0, 60) + (firstLine.length > 60 ? '...' : '');
+            }
+        }
+        
+        // Extract from message if it contains patterns like "Found:", "contains", etc.
+        const foundMatch = violation.message.match(/(?:found|contains|has|detected)[\s:]+(.+?)(?:\s+(?:but|in|at|$))/i);
+        if (foundMatch && foundMatch[1]) {
+            return foundMatch[1].substring(0, 60);
+        }
+        
+        return null;
+    }
+
+    private extractFixText(violation: ViolationDetail): string | null {
+        // Common fix suggestions based on rule types and messages
+        const message = violation.message.toLowerCase();
+        
+        if (message.includes('console.log') || message.includes('console')) {
+            return 'Remove console.log or use proper logger';
+        }
+        
+        if (message.includes('unused')) {
+            return 'Remove unused code';
+        }
+        
+        if (message.includes('import') && message.includes('infrastructure')) {
+            return 'Remove infrastructure import from domain layer';
+        }
+        
+        if (message.includes('try-catch') || message.includes('error handling')) {
+            return 'Add error handling';
+        }
+        
+        if (message.includes('validation') || message.includes('sanitiz')) {
+            return 'Add input validation';
+        }
+        
+        if (message.includes('secret') || message.includes('password')) {
+            return 'Use environment variables';
+        }
+        
+        if (message.includes('not allowed') || message.includes('should not')) {
+            return 'Remove disallowed code';
+        }
+        
+        return null;
+    }
+
     private color(text: string, ...colors: string[]): string {
+        // Don't apply colors in claude-code-hook mode to save tokens
+        if (this.claudeCodeHook) {
+            return text;
+        }
+
         let result = text;
 
         for (const color of colors) {

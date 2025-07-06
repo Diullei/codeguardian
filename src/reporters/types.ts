@@ -1,4 +1,5 @@
 import { DiffInfo } from '../types';
+import { OriginalCliArgs } from '../utils/cliCommandBuilder';
 
 export interface ValidationReport {
     passed: boolean;
@@ -12,6 +13,7 @@ export interface ValidationReport {
     results: RuleValidationResult[];
     diff: DiffInfo;
     duration: number;
+    originalCliArgs?: OriginalCliArgs;
 }
 
 export interface RuleValidationResult {
