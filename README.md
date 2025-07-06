@@ -312,13 +312,29 @@ codeguardian check [options]
 Options:
   -c, --config   Rule files or pattern        [auto-discovers .cg.yaml]
   -e, --exclude  Exclude patterns             [array]
-  -r, --repo     Repository path              [default: "."]
+  -r, --repo     Repository path              [disables auto-discovery]
+  -C             Change to directory first    [like git -C]
   -b, --base     Base branch                  [default: auto-detected]
   --head         Head branch/commit           [default: "HEAD"]
   -m, --mode     Validation scope             [diff|all|staged] [default: "diff"]
   -f, --format   Output format                [console|json] [default: "console"]
   --skip-missing-ast-grep  Skip AST rules if ast-grep not installed
   --claude-code-hook       Claude Code hook mode (exit 2 on errors, silent on success)
+```
+
+### Repository Auto-Discovery
+
+Code Guardian automatically finds your Git repository root when run from any subdirectory:
+
+```bash
+# Auto-discovers repository root from current directory
+codeguardian check
+
+# Change to directory first, then auto-discover
+codeguardian check -C /path/to/project/src
+
+# Use explicit repository path (no auto-discovery)
+codeguardian check --repo /path/to/repo
 ```
 
 ## 🗺️ Project Status

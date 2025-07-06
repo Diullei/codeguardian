@@ -9,11 +9,13 @@ import { createRuleFactory, ConfigurationLoader } from '../config';
 import { ResultCache } from '../core';
 import { EvaluationContext, Mode } from '../types';
 import { ConsoleReporter, JsonReporter, ValidationReport } from '../reporters';
+import { resolveRepositoryPath } from '../utils/findGitRoot';
 
 interface ValidateArgs {
     config?: string;
     exclude?: string[];
-    repo: string;
+    repo?: string;
+    C?: string;
     base: string;
     head?: string;
     format?: 'console' | 'json';
@@ -49,8 +51,11 @@ const cli = yargs(hideBin(process.argv))
                 .option('repo', {
                     alias: 'r',
                     type: 'string',
-                    description: 'Path to the repository to validate',
-                    default: '.',
+                    description: 'Path to the repository to validate (disables auto-discovery)',
+                })
+                .option('C', {
+                    type: 'string',
+                    description: 'Change to directory before running (like git -C)',
                 })
                 .option('base', {
                     alias: 'b',
@@ -91,8 +96,12 @@ const cli = yargs(hideBin(process.argv))
                 })
                 .epilogue(
                     'Examples:\n' +
-                        '  # Auto-discover configuration files\n' +
+                        '  # Auto-discover repository root and configuration files\n' +
                         '  $ codeguardian check\n\n' +
+                        '  # Change to directory first (like git -C)\n' +
+                        '  $ codeguardian check -C /path/to/repo\n\n' +
+                        '  # Use explicit repository path (no auto-discovery)\n' +
+                        '  $ codeguardian check --repo /path/to/repo\n\n' +
                         '  # Use specific configuration file\n' +
                         '  $ codeguardian check -c rules.yaml\n\n' +
                         '  # Use glob pattern to check multiple files\n' +
@@ -120,18 +129,21 @@ const cli = yargs(hideBin(process.argv))
 async function runValidation(args: ValidateArgs) {
     const startTime = Date.now();
 
+    // Resolve repository path using auto-discovery
+    const repoPath = resolveRepositoryPath(args.repo, args.C);
+
     // Load configurations using ConfigurationLoader
     const loader = new ConfigurationLoader();
-    const configurations = await loader.loadConfigurations(args.config, args.repo, args.exclude);
+    const configurations = await loader.loadConfigurations(args.config, repoPath, args.exclude);
 
     // Store configuration info for later use
-    const configurationFiles = configurations.map(config => path.relative(args.repo, config.path));
+    const configurationFiles = configurations.map(config => path.relative(repoPath, config.path));
 
     // Create rule factory
     const factory = createRuleFactory();
 
     // Initialize repository
-    const repository = new GitRepository(path.resolve(args.repo));
+    const repository = new GitRepository(repoPath);
     
     // Use the actual base branch, falling back to default if needed
     let baseBranch = args.base;
@@ -212,7 +224,7 @@ async function runValidation(args: ValidateArgs) {
             ruleId: configData.id || rule.id,
             ruleDescription:
                 configData.description || `Rules from ${path.basename(loadedConfig.path)}`,
-            configFile: path.relative(args.repo, loadedConfig.path),
+            configFile: path.relative(repoPath, loadedConfig.path),
             passed: result.passed,
             violations: (result.violations || []).map(v => ({
                 file: v.file,
