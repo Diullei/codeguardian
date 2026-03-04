@@ -37,3 +37,10 @@ yarn-error.log*
 *.temp
 .cache/
 repomix-output.*
+
+# CodeGuardian
+.repomixignore
+repomix.config.json
+
+# Newton
+.newton

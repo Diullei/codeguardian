@@ -28,7 +28,7 @@ export class SelectFileChangesRule extends SelectorRule {
             try {
                 const content = await context.repository.getFileContent(file.path);
                 totalLines = content.split('\n').length;
-            } catch (error) {
+            } catch {
                 // If we can't read the file, skip it
                 continue;
             }

@@ -90,7 +90,7 @@ export class GitRepository implements Repository {
 
                 try {
                     fileInfo.content = await this.getFileContent(filePath);
-                } catch (error) {
+                } catch {
                     // File might not be readable
                 }
 
@@ -141,7 +141,7 @@ export class GitRepository implements Repository {
                     if (file.binary === false && (status === 'added' || status === 'modified')) {
                         try {
                             fileInfo.content = await this.getFileContent(file.file);
-                        } catch (error) {
+                        } catch {
                             // File might not exist in working directory
                         }
                     }
@@ -176,7 +176,7 @@ export class GitRepository implements Repository {
                     if (file.binary === false && (status === 'added' || status === 'modified')) {
                         try {
                             fileInfo.content = await this.getFileContent(file.file);
-                        } catch (error) {
+                        } catch {
                             // File might not exist in working directory
                         }
                     }
@@ -262,7 +262,7 @@ export class GitRepository implements Repository {
                 if (status !== 'deleted') {
                     try {
                         fileInfo.content = await this.getFileContent(filePath);
-                    } catch (error) {
+                    } catch {
                         // File might not be readable
                     }
                 }
@@ -291,7 +291,7 @@ export class GitRepository implements Repository {
                 if (file.binary === false && status !== 'deleted') {
                     try {
                         fileInfo.content = await this.getFileContent(file.file);
-                    } catch (error) {
+                    } catch {
                         // File might not exist
                     }
                 }

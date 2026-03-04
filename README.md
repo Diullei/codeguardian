@@ -37,6 +37,7 @@ Code Guardian is a validation tool that helps you maintain code quality and arch
 - 📦 **Zero Config** - Sensible defaults with full customization when needed
 - 🛡️ **Git-Native** - Works seamlessly with branches, commits, and diffs
 - 🚫 **Smart Exclusions** - Use `.cg-ignore` files to skip directories
+- 📝 **Rule Editor** - Web UI to edit rule files with forms, tooltips, and validation (run `codeguardian edit`)
 
 ## 🚀 Quick Start
 
@@ -253,6 +254,16 @@ assert:
     message: 'New files must use PascalCase'
 ```
 
+### Editing rules (web UI)
+
+Run `codeguardian edit [file]` to start a local server and open the rule editor in your browser. If you omit `[file]`, the editor loads `.codeguardian/development-rules.cg.yaml` by default. The web UI provides form-based editing for combinators, selectors, and assertions, with tooltips on fields. Use **Open** to load another rule file, **Validate** to check the rule definition, **View YAML** to see the generated YAML, and **Save** / **Revert** to persist or discard changes.
+
+```bash
+codeguardian edit .codeguardian/my-rules.cg.yaml
+```
+
+Options: `--port`, `--host`, `--no-open` (see CLI Reference below).
+
 ## 🤝 AI Integration Workflow
 
 When using AI coding assistants:
@@ -290,6 +301,7 @@ Code Guardian uses simple primitives that compose into powerful rules:
 - **[Claude Code Integration](docs/claude-code-integration.md)** - Automatic validation with Claude Code hooks
 - **[Cheat Sheet](Cheat_Sheet.md)** - Complete syntax reference with examples
 - **[Examples](examples/)** - Real-world rule configurations
+- **Rule editor**: run `codeguardian edit` to edit rule files in the browser
 
 ### Generate Rules with AI
 
@@ -306,6 +318,8 @@ For more sophisticated AI integration, check out our [Claude command definitions
 
 ## 🛠️ CLI Reference
 
+### codeguardian check
+
 ```bash
 codeguardian check [options]
 
@@ -321,6 +335,15 @@ Options:
   --skip-missing-ast-grep  Skip AST rules if ast-grep not installed
   --claude-code-hook       Claude Code hook mode (exit 2 on errors, silent on success)
 ```
+
+### codeguardian edit
+
+```bash
+codeguardian edit [options] [file]
+```
+
+- **`[file]`**: Path to a single `.cg.yaml` or `.codeguardian.yaml` file (optional). Default: `.codeguardian/development-rules.cg.yaml`.
+- **Options**: `--port <port>` (default 3847), `--host <host>` (default 127.0.0.1), `--no-open` (do not open browser, only print URL).
 
 ### Repository Auto-Discovery
 
@@ -348,6 +371,7 @@ codeguardian check --repo /path/to/repo
 - ✅ Basic assertions and combinators
 - ✅ Git integration
 - ✅ CLI interface
+- ✅ Rule editor (web UI) for editing rule files
 
 ## 🤝 Contributing
 

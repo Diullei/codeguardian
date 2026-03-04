@@ -35,7 +35,7 @@ export class SelectASTNodesRule extends SelectorRule {
             try {
                 await execAsync('ast-grep --version');
                 return true;
-            } catch (e) {
+            } catch {
                 return false;
             }
         });

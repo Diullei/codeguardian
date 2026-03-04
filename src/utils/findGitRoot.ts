@@ -19,7 +19,7 @@ export function findGitRoot(startPath: string = process.cwd()): string | null {
                 // .git can be a directory (normal repos) or a file (submodules/worktrees)
                 return currentPath;
             }
-        } catch (error) {
+        } catch {
             // .git doesn't exist in this directory, continue searching
         }
 
@@ -34,7 +34,7 @@ export function findGitRoot(startPath: string = process.cwd()): string | null {
         if (stats.isDirectory() || stats.isFile()) {
             return root;
         }
-    } catch (error) {
+    } catch {
         // .git doesn't exist in root either
     }
 

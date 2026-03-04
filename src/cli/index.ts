@@ -4,6 +4,9 @@ import yargs from 'yargs';
 import { hideBin } from 'yargs/helpers';
 import { promises as fs } from 'fs';
 import * as path from 'path';
+import { glob } from 'glob';
+import { createInterface } from 'readline/promises';
+import { stdin as input, stdout as output } from 'process';
 import { GitRepository } from '../adapters';
 import { createRuleFactory, ConfigurationLoader } from '../config';
 import { ResultCache } from '../core';
@@ -24,6 +27,12 @@ interface ValidateArgs {
     claudeCodeHook?: boolean;
 }
 
+export interface EditArgs {
+    file?: string;
+    port?: number;
+    host?: string;
+    noOpen?: boolean;
+}
 
 const cli = yargs(hideBin(process.argv))
     .scriptName('codeguardian')
@@ -79,7 +88,8 @@ const cli = yargs(hideBin(process.argv))
                     alias: 'm',
                     type: 'string',
                     choices: ['diff', 'all', 'staged'] as const,
-                    description: 'What to check: diff (changes between branches), all (entire working directory), staged (staged files only)',
+                    description:
+                        'What to check: diff (changes between branches), all (entire working directory), staged (staged files only)',
                     default: 'diff',
                 })
                 .option('skip-missing-ast-grep', {
@@ -121,6 +131,51 @@ const cli = yargs(hideBin(process.argv))
             }
         }
     )
+    .command<EditArgs>(
+        'edit [file]',
+        'Edit a rule file using a web-based UI',
+        yargs => {
+            return yargs
+                .positional('file', {
+                    type: 'string',
+                    description: 'Path to rule file to edit',
+                })
+                .option('file', {
+                    alias: 'f',
+                    type: 'string',
+                    description: 'Path to rule file to edit',
+                })
+                .option('port', {
+                    alias: 'p',
+                    type: 'number',
+                    description: 'Port for the web server',
+                    default: 3847,
+                })
+                .option('host', {
+                    type: 'string',
+                    description: 'Bind address for the web server',
+                    default: '127.0.0.1',
+                })
+                .option('no-open', {
+                    type: 'boolean',
+                    description: 'Skip opening browser automatically',
+                    default: false,
+                })
+                .example(
+                    '$0 edit .codeguardian/development-rules.cg.yaml',
+                    'Edit the development rules file'
+                )
+                .example('$0 edit -p 3000 --no-open', 'Edit on port 3000 without opening browser');
+        },
+        async args => {
+            try {
+                await runEdit(args);
+            } catch (error) {
+                console.error('Error:', error instanceof Error ? error.message : String(error));
+                process.exit(1);
+            }
+        }
+    )
     .demandCommand(1, 'You need at least one command before moving on')
     .help()
     .version()
@@ -144,14 +199,14 @@ async function runValidation(args: ValidateArgs) {
 
     // Initialize repository
     const repository = new GitRepository(repoPath);
-    
+
     // Use the actual base branch, falling back to default if needed
     let baseBranch = args.base;
     if (args.base === 'main') {
         // If user didn't override the default, check what the actual default branch is
         baseBranch = await repository.getDefaultBranch();
     }
-    
+
     const diff = await repository.getDiff(baseBranch, args.head || 'HEAD');
 
     // Create evaluation context
@@ -168,7 +223,6 @@ async function runValidation(args: ValidateArgs) {
 
     // Process each configuration file
     const allResults: ValidationReport['results'] = [];
-    let totalConfigsPassed = 0;
     let totalConfigsFailed = 0;
     let totalViolations = 0;
     let totalFiles = 0;
@@ -211,9 +265,7 @@ async function runValidation(args: ValidateArgs) {
             }
         }
 
-        if (result.passed) {
-            totalConfigsPassed++;
-        } else {
+        if (!result.passed) {
             totalConfigsFailed++;
         }
 
@@ -276,16 +328,17 @@ async function runValidation(args: ValidateArgs) {
     };
 
     // Select reporter based on format
-    const reporter = args.format === 'json' 
-        ? new JsonReporter() 
-        : new ConsoleReporter({ claudeCodeHook: args.claudeCodeHook });
+    const reporter =
+        args.format === 'json'
+            ? new JsonReporter()
+            : new ConsoleReporter({ claudeCodeHook: args.claudeCodeHook });
 
     // Only show configuration info if:
     // 1. Not in JSON format
     // 2. Not in claude-code-hook mode (to save tokens)
     if (args.format !== 'json' && !args.claudeCodeHook) {
         console.log(`Found ${configurations.length} configuration file(s):`);
-        
+
         // Sort for readability
         const sortedFiles = [...configurationFiles].sort();
         sortedFiles.forEach(file => {
@@ -301,6 +354,103 @@ async function runValidation(args: ValidateArgs) {
     if (!overallPassed) {
         // In Claude Code hook mode, exit with code 2 for violations
         process.exit(args.claudeCodeHook ? 2 : 1);
+    }
+}
+
+async function runEdit(args: EditArgs) {
+    const { startEditServer } = await import('./edit-server');
+    const editArgs: EditArgs = { ...args };
+
+    if (!editArgs.file) {
+        const discoveredFiles = await discoverRuleFiles(process.cwd());
+        const selectedFile = await selectRuleFile(discoveredFiles);
+
+        if (selectedFile) {
+            editArgs.file = selectedFile;
+        } else {
+            editArgs.file = '.codeguardian/development-rules.cg.yaml';
+            console.log(
+                `No existing rule files found. Using default: ${path.resolve(editArgs.file)}`
+            );
+        }
+    }
+
+    await startEditServer(editArgs);
+}
+
+async function discoverRuleFiles(basePath: string): Promise<string[]> {
+    const patterns = [
+        '**/*.codeguardian.yaml',
+        '**/*.codeguardian.yml',
+        '**/*.cg.yaml',
+        '**/*.cg.yml',
+        '.codeguardian.yaml',
+        '.codeguardian.yml',
+        '.cg.yaml',
+        '.cg.yml',
+        '.codeguardian/*.yaml',
+        '.codeguardian/*.yml',
+        '.codeguardian/*.cg.yaml',
+        '.codeguardian/*.cg.yml',
+        '.codeguardian/*.codeguardian.yaml',
+        '.codeguardian/*.codeguardian.yml',
+    ];
+    const ignore = ['**/node_modules/**', '**/dist/**', '**/.git/**'];
+    const allMatches: string[] = [];
+
+    for (const pattern of patterns) {
+        const matches = await glob(pattern, {
+            cwd: basePath,
+            absolute: true,
+            ignore,
+        });
+        allMatches.push(...matches);
+    }
+
+    return [...new Set(allMatches)].sort((a, b) => a.localeCompare(b));
+}
+
+async function selectRuleFile(files: string[]): Promise<string | undefined> {
+    if (files.length === 0) {
+        return undefined;
+    }
+    if (files.length === 1) {
+        return files[0];
+    }
+
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+        const firstFile = files[0];
+        if (firstFile) {
+            console.warn(
+                `Multiple rule files found but terminal is non-interactive. Using: ${firstFile}`
+            );
+        }
+        return firstFile;
+    }
+
+    console.log('Multiple rule files found. Select one to edit:');
+    files.forEach((file, index) => {
+        console.log(`  ${index + 1}. ${path.relative(process.cwd(), file) || file}`);
+    });
+
+    const rl = createInterface({ input, output });
+    try {
+        while (true) {
+            const answer = (await rl.question(`Choose file [1-${files.length}] (default: 1): `))
+                .trim();
+            if (answer === '') {
+                return files[0];
+            }
+
+            const choice = Number.parseInt(answer, 10);
+            if (Number.isInteger(choice) && choice >= 1 && choice <= files.length) {
+                return files[choice - 1];
+            }
+
+            console.log(`Invalid selection. Enter a number between 1 and ${files.length}.`);
+        }
+    } finally {
+        rl.close();
     }
 }
 

@@ -35,7 +35,7 @@ export class ForEachRule extends CombinatorRule {
                     try {
                         const content = await context.repository.getFileContent(item.path);
                         itemToAssert = { ...item, content };
-                    } catch (error) {
+                    } catch {
                         // If we can't get the content, use the item as-is
                         itemToAssert = item;
                     }

@@ -64,6 +64,10 @@ rule:
     # ... rule configuration
 ```
 
+### Editing rules in the browser
+
+Rule files can be edited visually with `codeguardian edit [file]`. The web UI shows forms for combinators, selectors, and assertions, with tooltips on fields. It supports **Open** (load another file by path), **Validate** (check the rule definition), and **View YAML** (preview generated YAML). See the README for the edit command and options. The same YAML can be authored in an editor or via this UI.
+
 ---
 
 ### 3. Selectors (Finding _What_ to Check)
@@ -138,6 +142,15 @@ language: 'typescript' # Required. The language to parse.
 ---
 
 ### 4. Assertions (Checking a Condition)
+
+#### Message and Suggestion
+
+Many assertions support optional **message** and **suggestion** fields:
+
+- **message**: Custom main failure line when the assertion fails. Overrides the default engine message where supported (e.g. `assert_line_count`). Shown in CLI and reports.
+- **suggestion**: Actionable guidance when the rule fails. Displayed as "Suggestion: ..." in console output. Use for short, actionable fixes (e.g. "Move to scripts/" or "Use parameterized queries").
+
+Supported on: `assert_match`, `assert_line_count`, `assert_command_output`. Not supported on `assert_property` (see note there).
 
 #### `assert_match`
 
@@ -383,7 +396,7 @@ rule:
 
 ```
 
-**Use Case:** Perfect for tasks that should only refactor, fix bugs, or update existing functionality without adding new files. This helps enforce that AI-generated code stays within the intended scope of changes.
+**Use Case:** Refactors or bugfixes that must not add new files.
 
 #### Pattern 6: Control File Change Magnitude
 
@@ -405,7 +418,7 @@ rule:
 
 ```
 
-**Use Case:** Essential for maintaining code stability, preventing AI from completely rewriting files, and ensuring changes are reviewable. Particularly useful for protecting critical configuration files and enforcing incremental development practices.
+**Use Case:** Protect critical config from large rewrites; keep changes reviewable.
 
 #### Pattern 7: File Size Validation
 
@@ -426,33 +439,9 @@ rule:
     max_lines: 450
     message: "Go file exceeds maximum line limit of 450 lines"
     suggestion: "Consider breaking this file into smaller modules or extracting functionality"
-
-# Example 2: Multiple language file size limits
-id: file-size-limits
-description: Enforce different line limits per language
-rule:
-  type: all_of
-  rules:
-    - type: for_each
-      select:
-        type: select_files
-        path_pattern: '**/*.go'
-      assert:
-        type: assert_line_count
-        operator: '<='
-        max_lines: 450
-    - type: for_each
-      select:
-        type: select_files
-        path_pattern: '**/*.{ts,js}'
-      assert:
-        type: assert_line_count
-        operator: '<='
-        max_lines: 300
-        suggestion: "TypeScript/JavaScript files should be under 300 lines"
 ```
 
-**Use Case:** Prevents overly large files that are hard to review, maintain, and understand. Encourages modular code organization and helps teams maintain consistent code quality standards.
+**Use Case:** Prevents overly large files; use `all_of` with multiple `for_each` blocks for different path patterns if you need per-language limits.
 
 ---
 
@@ -676,24 +665,9 @@ rule:
         pattern: '.*'
         should_match: true
         message: 'Found file with "_improved" suffix. Please update the original file instead.'
-
-# Example 2: Check in --mode all (for existing files)
-# Run with: codeguardian check --mode all
-id: no-alternative-versions
-description: Detect any alternative file versions in the entire codebase
-rule:
-  type: none_of
-  rules:
-    - type: for_each
-      select:
-        type: select_files
-        path_pattern: '**/*[-_](improved|enhanced|new|v2|copy|backup|old)\.*'
-      assert:
-        type: assert_match
-        pattern: '.*'
-        should_match: true
-        message: 'Found alternative file version. Update the original file instead of creating duplicates.'
 ```
+
+Use a broader `path_pattern` (e.g. `**/*[-_](improved|enhanced|v2|copy|backup|old)*`) and `select_all: true` to catch alternatives across the whole repo.
 
 **Important Note about `assert_count` with `for_each`:**
 The `assert_count` assertion counts items within each file separately when used inside `for_each`. It does NOT count the total number of files selected. To check if ANY files match a pattern, use the `none_of` combinator pattern shown above.

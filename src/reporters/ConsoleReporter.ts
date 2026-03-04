@@ -143,7 +143,7 @@ export class ConsoleReporter implements ValidationReporter {
             const fullText = `${statusText} in ${duration.toFixed(2)}s`;
 
             // Calculate padding
-            const textLength = fullText.replace(/\x1b\[[0-9;]*m/g, '').length; // Remove ANSI codes for length calculation
+            const textLength = this.stripAnsi(fullText).length;
             const padding = Math.max(0, 80 - textLength - 8);
 
             this.log(`${'='.repeat(4)} ${fullText} ${'='.repeat(padding)}`);
@@ -182,6 +182,13 @@ export class ConsoleReporter implements ValidationReporter {
         result.violations.forEach((violation: ViolationDetail) => {
             this.printViolation(violation);
         });
+    }
+
+    private stripAnsi(text: string): string {
+        return Object.values(this.colors).reduce(
+            (acc, ansiCode) => acc.split(ansiCode).join(''),
+            text
+        );
     }
 
     private printViolation(violation: ViolationDetail): void {

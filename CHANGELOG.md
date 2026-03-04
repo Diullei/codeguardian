@@ -2,6 +2,22 @@
 
 All notable changes to Code Guardian will be documented in this file.
 
+## [0.1.0-beta.10] - 2025-03-03
+
+### Added
+- **`codeguardian edit` command**: Web UI for editing rule files
+  - `codeguardian edit [file]` starts a local server (default port 3847) and opens the rule editor in the browser; default file is `.codeguardian/development-rules.cg.yaml` when `[file]` is omitted
+  - Options: `--port`, `--host`, `--no-open` (print URL only, do not open browser)
+  - Form-based editing for rule id, description, and full rule tree (combinators, selectors, assertions)
+  - Tooltips and inline hints on fields (path pattern, exclude pattern, status, message, suggestion, etc.)
+  - **Open** button: load another rule file by path (relative to project root); API supports `GET /api/rule?file=` and `PUT /api/rule` with optional `filePath` in body
+  - **Validate** button: `POST /api/validate` checks that the rule definition parses and builds using the existing rule factory
+  - **View YAML**: full serialization of the current rule, including all assertion properties (operator, max_lines, message, suggestion, documentation)
+- **Message and Suggestion** tooltips in the rule editor explaining custom failure message vs actionable suggestion
+
+### Fixed
+- View YAML in the rule editor now outputs full assertion content (e.g. `operator`, `max_lines`, `message`, `suggestion`) instead of stopping after the assertion type line
+
 ## [0.1.0-beta.9] - 2025-01-06
 
 ### Added

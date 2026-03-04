@@ -83,7 +83,7 @@ assert:
                 expect(output).not.toContain('Found 1 configuration file(s):');
                 
                 // Should not contain ANSI color codes
-                expect(output).not.toMatch(/\x1b\[\d+m/);
+                expect(output).not.toContain('\x1b[');
             }
         });
 

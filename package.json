@@ -14,9 +14,12 @@
     "Cheat_Sheet.md"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:backend && npm run build:ui",
+    "build:backend": "tsc",
+    "build:ui": "cd src/edit-ui && npm run build",
     "postbuild": "chmod +x dist/cli/index.js",
     "dev": "tsc --watch",
+    "dev:ui": "cd src/edit-ui && npm run dev",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint .",
@@ -59,9 +62,13 @@
     "node": ">=16.0.0"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
     "@types/minimatch": "^5.1.2",
     "@types/node": "^24.0.3",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
     "@types/yargs": "^17.0.33",
     "@typescript-eslint/eslint-plugin": "^8.34.1",
     "@typescript-eslint/parser": "^8.34.1",
@@ -75,8 +82,11 @@
   },
   "dependencies": {
     "@types/glob": "^8.1.0",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "glob": "^11.0.3",
     "minimatch": "^10.0.3",
+    "open": "^10.1.0",
     "simple-git": "^3.28.0",
     "yaml": "^2.8.0",
     "yargs": "^18.0.0"
